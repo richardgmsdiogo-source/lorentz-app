@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Área da Noiva / Cliente • Lorentz</title>
+  <title>Área do Cliente • Lorentz</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -35,7 +35,7 @@
     <div class="hero-overlay"></div>
     <div class="hero-content">
       <p class="hero-kicker">ÁREA EXCLUSIVA</p>
-      <h1>Área da noiva / cliente</h1>
+      <h1>Área do cliente</h1>
       <p class="hero-subtitle">
         Acompanhe seu orçamento, contrato e pagamentos. A equipe Lorentz usa
         o mesmo painel para administrar os eventos.
@@ -78,41 +78,99 @@
           <p class="section-kicker">Administração</p>
           <h2>Painel do administrador</h2>
           <p class="hint">
-            Cadastre novas decorações com várias fotos. Depois vamos ligar daqui com as
-            tabelas de orçamentos, contratos e pagamentos.
+            Nesta área você gerencia o portfólio (decorações) e as contas das clientes:
+            orçamentos aprovados, contratos em PDF, forma de pagamento e redefinição de senha.
           </p>
 
+          <!-- BLOCO: CADASTRAR DECORAÇÃO -->
           <hr />
           <h3 class="subtitulo">Cadastrar decoração</h3>
           <p class="hint">
             Grava na tabela <code>decoracoes</code> e envia as imagens para o Storage
-            (bucket <code>decoracoes</code>). A primeira foto vira a capa.
+            (bucket <code>decoracoes</code>). A primeira foto vira a capa do catálogo
+            e as demais aparecem no carrossel.
           </p>
 
           <form id="form-decor" class="stack-form">
             <div class="form-row">
               <label for="decor-categoria">Categoria</label>
-              <input id="decor-categoria" placeholder="Casamento, Aniversário, 15 anos, Infantil..." />
+              <input
+                id="decor-categoria"
+                placeholder="Casamento, Aniversário, 15 anos, Infantil..."
+              />
             </div>
             <div class="form-row">
               <label for="decor-titulo">Título</label>
-              <input id="decor-titulo" placeholder="Ex.: Casamento Clássico em Branco e Dourado" required />
+              <input
+                id="decor-titulo"
+                placeholder="Ex.: Casamento Clássico em Branco e Dourado"
+                required
+              />
             </div>
             <div class="form-row">
               <label for="decor-descricao">Descrição</label>
-              <input id="decor-descricao" placeholder="Descrição rápida da decoração" />
+              <input
+                id="decor-descricao"
+                placeholder="Descrição rápida da decoração"
+              />
             </div>
             <div class="form-row">
               <label for="decor-imagem">Imagens da decoração</label>
               <input id="decor-imagem" type="file" accept="image/*" multiple />
               <span class="hint">
                 Você pode selecionar várias fotos. A primeira será usada como capa;
-                todas aparecem no carrossel.
+                todas aparecem no carrossel ao abrir o cenário.
               </span>
             </div>
             <button type="submit" class="btn-primary">Salvar decoração</button>
             <p id="decor-status" class="status"></p>
           </form>
+
+          <!-- BLOCO: GESTÃO DE CLIENTES -->
+          <hr />
+          <h3 class="subtitulo">Gestão de clientes</h3>
+          <p class="hint">
+            Selecione uma cliente para anexar contrato assinado, orçamento aprovado em PDF,
+            ajustar a forma de pagamento e enviar link de redefinição de senha.
+          </p>
+
+          <div id="admin-clientes-list" class="clientes-list">
+            <!-- preenchido via JavaScript -->
+          </div>
+
+          <div id="admin-cliente-detalhe" class="cliente-detalhe hidden">
+            <h4 id="cliente-nome-titulo"></h4>
+            <p class="hint" id="cliente-info-basica"></p>
+
+            <form id="form-documentos" class="stack-form">
+              <div class="form-row">
+                <label for="orcamento-pdf">Orçamento aprovado (PDF)</label>
+                <input id="orcamento-pdf" type="file" accept="application/pdf" />
+              </div>
+              <div class="form-row">
+                <label for="contrato-pdf">Contrato assinado (PDF)</label>
+                <input id="contrato-pdf" type="file" accept="application/pdf" />
+              </div>
+              <div class="form-row">
+                <label for="forma-pagamento">Forma de pagamento</label>
+                <input
+                  id="forma-pagamento"
+                  placeholder="Pix à vista, boleto 3x, etc."
+                />
+              </div>
+              <button type="submit" class="btn-primary">
+                Salvar na conta da cliente
+              </button>
+              <p id="documentos-status" class="status"></p>
+            </form>
+
+            <button id="btn-reset-senha" class="btn-secondary" type="button">
+              Enviar link de redefinição de senha por e-mail
+            </button>
+            <p class="hint">
+              A cliente receberá um e-mail do sistema para escolher uma nova senha de acesso.
+            </p>
+          </div>
         </div>
 
         <!-- CLIENTE -->
@@ -120,11 +178,12 @@
           <p class="section-kicker">Minha festa</p>
           <h2>Meus eventos e pagamentos</h2>
           <p class="hint">
-            Em breve: listagem de orçamentos, contratos em PDF e pagamentos, com base
-            nas tabelas <code>clientes</code>, <code>orcamentos</code> e
-            <code>pagamentos</code> do Supabase.
+            Aqui você verá seus orçamentos aprovados, contratos em PDF e pagamentos
+            realizados e a vencer, conforme forem cadastrados pela equipe Lorentz.
           </p>
-          <div id="client-orcamentos" class="orcamentos-list"></div>
+          <div id="client-orcamentos" class="orcamentos-list">
+            <!-- Em breve: preenchido via Supabase com orçamentos/contratos/pagamentos -->
+          </div>
         </div>
       </section>
     </div>
@@ -137,7 +196,8 @@
     </p>
     <p>
       Criado por <a href="https://instagram.com/richard.gms" target="_blank">@richard.gms</a> •
-      WhatsApp: <a href="https://wa.me/5531986841995" target="_blank">31 98684-1995</a>
+      WhatsApp:
+      <a href="https://wa.me/5531986841995" target="_blank">31 98684-1995</a>
     </p>
   </footer>
 
