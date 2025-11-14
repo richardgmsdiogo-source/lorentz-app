@@ -509,3 +509,49 @@ h2 {
 .hidden {
   display: none !important;
 }
+
+.clientes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.cliente-card {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.cliente-card-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.cliente-card-main strong {
+  font-size: 13px;
+}
+
+.cliente-card-main span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.btn-small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.cliente-detalhe {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
