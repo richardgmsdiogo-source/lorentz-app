@@ -1,14 +1,14 @@
-// app.js
+// Código principal do portal Lorentz. Controla navegação, login, catálogo
+// e upload de decorações com múltiplas imagens. Usa Supabase para autenticar
+// e persistir dados. Este arquivo é carregado como módulo (type="module").
 import { supabase } from "./config.js";
 
-// =======================
-// Elements básicos
-// =======================
+// ===== Seleção de elementos =====
 const heroSection = document.getElementById("hero");
 const catalogSection = document.getElementById("catalogo-card");
 const authSection = document.getElementById("auth-card");
 
-const navLinks = document.querySelectorAll(".main-nav a");
+const navLinks = document.querySelectorAll(".main-nav .nav-link");
 const heroNavButtons = document.querySelectorAll(".js-nav-view");
 
 const catalogoGrid = document.getElementById("catalogo-grid");
@@ -25,7 +25,7 @@ const headerSessionText = document.getElementById("header-session-text");
 const headerRole = document.getElementById("header-role");
 const btnLogout = document.getElementById("btn-logout");
 
-// Admin - cadastrar decoração
+// Campos do admin para cadastrar decoração
 const formDecor = document.getElementById("form-decor");
 const decorCategoria = document.getElementById("decor-categoria");
 const decorTitulo = document.getElementById("decor-titulo");
@@ -33,62 +33,59 @@ const decorDescricao = document.getElementById("decor-descricao");
 const decorImagem = document.getElementById("decor-imagem");
 const decorStatus = document.getElementById("decor-status");
 
-// Modal / carrossel
+// Modal e carrossel de imagens
 const decorModal = document.getElementById("decor-modal");
 const decorModalClose = document.getElementById("decor-modal-close");
 const decorModalContent = document.getElementById("decor-modal-content");
 
-// =======================
-// Controle de "views" do site
-// =======================
+// ===== Controle de views =====
+// Muda quais seções estão visíveis de acordo com data-view
 function showView(view) {
-  // Reset tudo
+  // Oculta tudo
   heroSection.classList.add("hidden");
   catalogSection.classList.add("hidden");
   authSection.classList.add("hidden");
 
-  // home: hero + catálogo + área do cliente (como hoje)
+  // Home: tudo (hero, catálogo e auth)
   if (view === "home") {
     heroSection.classList.remove("hidden");
     catalogSection.classList.remove("hidden");
     authSection.classList.remove("hidden");
   }
-
-  // catálogo: hero + catálogo apenas
+  // Catálogo: apenas hero + catálogo
   if (view === "catalogo") {
     heroSection.classList.remove("hidden");
     catalogSection.classList.remove("hidden");
   }
-
-  // cliente: hero + área do cliente apenas
+  // Cliente: apenas hero + área do cliente
   if (view === "cliente") {
     heroSection.classList.remove("hidden");
     authSection.classList.remove("hidden");
   }
-
-  // estado visual do menu
+  // Atualiza navegação ativa
   navLinks.forEach((link) => {
     link.classList.toggle("nav-active", link.dataset.view === view);
   });
 }
 
+// Handler para links de navegação
 navLinks.forEach((link) => {
   link.addEventListener("click", (e) => {
     e.preventDefault();
-    showView(link.dataset.view || "home");
+    const view = link.dataset.view || "home";
+    showView(view);
   });
 });
-
+// Os botões do hero replicam a navegação (usa data-view)
 heroNavButtons.forEach((btn) => {
   btn.addEventListener("click", (e) => {
     e.preventDefault();
-    showView(btn.dataset.view || "home");
+    const view = btn.dataset.view || "home";
+    showView(view);
   });
 });
 
-// =======================
-// UI de sessão
-// =======================
+// ===== Sessão de usuário =====
 function setLoggedOutUI() {
   loginSection.classList.remove("hidden");
   adminSection.classList.add("hidden");
@@ -123,21 +120,18 @@ async function handleSession(user) {
     setLoggedOutUI();
     return;
   }
-
+  // Busca o profile para saber o papel do usuário
   const { data: profile, error } = await supabase
     .from("profiles")
     .select("name, role")
     .eq("id", user.id)
     .maybeSingle();
-
   if (error) {
     console.error("Erro ao carregar profile:", error);
     setLoggedOutUI();
     return;
   }
-
   const name = profile?.name || user.email;
-
   if (profile?.role === "admin") {
     setAdminUI(name);
   } else {
@@ -145,35 +139,28 @@ async function handleSession(user) {
   }
 }
 
-// =======================
-// Catálogo / decorações
-// =======================
+// ===== Catálogo de decorações =====
 async function loadCatalog(categoria = "todos") {
   let query = supabase
     .from("decoracoes")
     .select("id, categoria, titulo, descricao, imagem_url, ativo")
     .eq("ativo", true)
     .order("id", { ascending: false });
-
   if (categoria && categoria !== "todos") {
     query = query.eq("categoria", categoria);
   }
-
   const { data, error } = await query;
-
   catalogoGrid.innerHTML = "";
-
   if (error) {
     console.error(error);
     const div = document.createElement("div");
     div.className = "decor-card";
     div.innerHTML =
       '<div class="decor-title">Erro ao carregar catálogo</div>' +
-      `<div class="decor-desc">${error.message || ""}</div>`;
+      `<div class="decor-desc">${error.message || ''}</div>`;
     catalogoGrid.appendChild(div);
     return;
   }
-
   if (!data || data.length === 0) {
     const div = document.createElement("div");
     div.className = "decor-card";
@@ -183,7 +170,6 @@ async function loadCatalog(categoria = "todos") {
     catalogoGrid.appendChild(div);
     return;
   }
-
   for (const deco of data) {
     const card = document.createElement("article");
     card.className = "decor-card";
@@ -199,12 +185,12 @@ async function loadCatalog(categoria = "todos") {
       <button class="btn-secondary btn-small btn-ver-fotos">Ver fotos e detalhes</button>
     `;
     catalogoGrid.appendChild(card);
-
     const btnVer = card.querySelector(".btn-ver-fotos");
     btnVer.addEventListener("click", () => openDecorModal(deco));
   }
 }
 
+// Muda de categoria quando clica em uma aba
 catalogTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     catalogTabs.forEach((t) => t.classList.remove("active"));
@@ -214,16 +200,15 @@ catalogTabs.forEach((tab) => {
   });
 });
 
-// =======================
-// Modal + carrossel (várias fotos)
-// =======================
+// ===== Modal e carrossel =====
+// Busca todas as imagens armazenadas na pasta da decoração no Storage
 async function fetchDecorationImages(decoracaoId, fallbackUrl) {
   const paths = [];
   try {
+    // Lista objetos dentro da pasta decoracaoId no bucket 'decoracoes'
     const { data, error } = await supabase.storage
       .from("decoracoes")
       .list(`${decoracaoId}`, { limit: 20 });
-
     if (error) {
       console.error("Erro ao listar imagens:", error);
     } else if (data && data.length > 0) {
@@ -237,37 +222,31 @@ async function fetchDecorationImages(decoracaoId, fallbackUrl) {
   } catch (e) {
     console.error("Erro geral ao buscar imagens:", e);
   }
-
-  // Garante pelo menos a capa
+  // Se não houver imagens extras, usa a capa como fallback
   if (paths.length === 0 && fallbackUrl) {
     paths.push(fallbackUrl);
   }
-
   return paths;
 }
 
 async function openDecorModal(deco) {
+  // Monta o conteúdo do modal
   decorModalContent.innerHTML = `
     <p class="section-kicker">${deco.categoria || "Evento"}</p>
     <h3 class="modal-title">${deco.titulo}</h3>
     <p class="modal-desc">${deco.descricao || ""}</p>
     <div class="carousel">
       <button class="carousel-arrow" data-dir="prev">&#10094;</button>
-      <div class="carousel-viewport">
-        <img id="carousel-image" class="carousel-image" alt="${deco.titulo}" />
-      </div>
+      <div class="carousel-viewport"><img id="carousel-image" class="carousel-image" alt="${deco.titulo}" /></div>
       <button class="carousel-arrow" data-dir="next">&#10095;</button>
     </div>
   `;
-
   decorModal.classList.remove("hidden");
-
   const imgEl = document.getElementById("carousel-image");
   const arrows = decorModalContent.querySelectorAll(".carousel-arrow");
-
+  // Busca todas as imagens extras
   const imagens = await fetchDecorationImages(deco.id, deco.imagem_url);
   let index = 0;
-
   function render() {
     if (!imagens || imagens.length === 0) {
       imgEl.src = "";
@@ -276,7 +255,6 @@ async function openDecorModal(deco) {
       imgEl.src = imagens[index];
     }
   }
-
   arrows.forEach((btn) => {
     btn.addEventListener("click", () => {
       if (!imagens || imagens.length === 0) return;
@@ -289,95 +267,76 @@ async function openDecorModal(deco) {
       render();
     });
   });
-
   render();
 }
 
 function closeDecorModal() {
   decorModal.classList.add("hidden");
 }
-
 decorModalClose.addEventListener("click", closeDecorModal);
 decorModal.addEventListener("click", (e) => {
+  // Fecha se clicar fora do diálogo
   if (e.target === decorModal) closeDecorModal();
 });
 
-// =======================
-// Login / logout
-// =======================
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  loginStatus.textContent = "";
-  loginStatus.className = "status";
-
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
-
-  if (!email || !password) {
-    loginStatus.textContent = "Preencha e-mail e senha.";
-    loginStatus.className = "status error";
-    return;
-  }
-
-  loginStatus.textContent = "Autenticando...";
-
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
+// ===== Login e logout =====
+if (loginForm) {
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    loginStatus.textContent = "";
+    loginStatus.className = "status";
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    if (!email || !password) {
+      loginStatus.textContent = "Preencha e-mail e senha.";
+      loginStatus.className = "status error";
+      return;
+    }
+    loginStatus.textContent = "Autenticando...";
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      console.error(error);
+      loginStatus.textContent = "Erro ao entrar: " + error.message;
+      loginStatus.className = "status error";
+      return;
+    }
+    const user = data.user;
+    if (!user) {
+      loginStatus.textContent = "Não foi possível recuperar o usuário.";
+      loginStatus.className = "status error";
+      return;
+    }
+    loginStatus.textContent = "Login realizado com sucesso!";
+    loginStatus.className = "status ok";
+    await handleSession(user);
+    // Redireciona para a área do cliente após login
+    showView("cliente");
   });
-
-  if (error) {
-    console.error(error);
-    loginStatus.textContent = "Erro ao entrar: " + error.message;
-    loginStatus.className = "status error";
-    return;
-  }
-
-  const user = data.user;
-  if (!user) {
-    loginStatus.textContent = "Não foi possível recuperar o usuário.";
-    loginStatus.className = "status error";
-    return;
-  }
-
-  loginStatus.textContent = "Login realizado com sucesso!";
-  loginStatus.className = "status ok";
-  await handleSession(user);
-
-  // ao logar, faz sentido já mostrar view "cliente"
-  showView("cliente");
-});
-
+}
 btnLogout.addEventListener("click", async () => {
   await supabase.auth.signOut();
   setLoggedOutUI();
   showView("home");
 });
 
-// =======================
-// Admin: salvar decoração com VÁRIAS imagens
-// =======================
+// ===== Cadastrar decoração com múltiplas imagens =====
 if (formDecor) {
   formDecor.addEventListener("submit", async (e) => {
     e.preventDefault();
     decorStatus.textContent = "";
     decorStatus.className = "status";
-
     const titulo = decorTitulo.value.trim();
     const categoria = decorCategoria.value.trim();
     const descricao = decorDescricao.value.trim();
     const files = decorImagem.files;
-
     if (!titulo) {
       decorStatus.textContent = "Informe pelo menos o título da decoração.";
       decorStatus.className = "status error";
       return;
     }
-
     decorStatus.textContent = "Salvando decoração...";
     decorStatus.className = "status";
-
-    // 1) cria a linha da decoração
+    // 1) Cria a decoração no banco
     const { data: decoData, error: decoError } = await supabase
       .from("decoracoes")
       .insert({
@@ -388,44 +347,30 @@ if (formDecor) {
       })
       .select("id")
       .single();
-
     if (decoError) {
       console.error("Erro ao inserir decoração:", decoError);
-      decorStatus.textContent =
-        "Erro ao salvar decoração: " + decoError.message;
+      decorStatus.textContent = "Erro ao salvar decoração: " + decoError.message;
       decorStatus.className = "status error";
       return;
     }
-
     const decoracaoId = decoData.id;
     let capaUrl = null;
-
-    // 2) envia as imagens para o Storage em uma pasta por decoração
+    // 2) Envia todas as imagens para o bucket "decoracoes/<decoracaoId>"
     if (files && files.length > 0) {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const ext = file.name.split(".").pop();
-        const fileName =
-          Date.now().toString() +
-          "-" +
-          i +
-          "-" +
-          Math.random().toString(36).substring(2, 8) +
-          "." +
-          ext;
-
+        const unique = `${Date.now()}-${i}-${Math.random().toString(36).substring(2, 8)}`;
+        const fileName = `${unique}.${ext}`;
         const path = `${decoracaoId}/${fileName}`;
-
         const { error: uploadError } = await supabase.storage
           .from("decoracoes")
           .upload(path, file);
-
         if (uploadError) {
           console.error("Erro ao enviar imagem:", uploadError);
-          // segue tentando as demais
           continue;
         }
-
+        // A primeira imagem vira a capa
         if (!capaUrl) {
           const { data: publicData } = supabase.storage
             .from("decoracoes")
@@ -434,35 +379,31 @@ if (formDecor) {
         }
       }
     }
-
-    // 3) atualiza a capa (primeira imagem)
+    // 3) Atualiza a linha com a URL da capa, se existir
     if (capaUrl) {
       await supabase
         .from("decoracoes")
         .update({ imagem_url: capaUrl })
         .eq("id", decoracaoId);
     }
-
     decorStatus.textContent = "Decoração cadastrada com sucesso!";
     decorStatus.className = "status ok";
     formDecor.reset();
-
-    await loadCatalog(
-      document.querySelector(".catalog-tab.active")?.dataset.categoria ||
-        "todos"
-    );
+    // Recarrega catálogo na categoria atualmente ativa
+    const activeTab = document.querySelector(".catalog-tab.active");
+    const currentCat = activeTab ? activeTab.dataset.categoria : "todos";
+    await loadCatalog(currentCat);
   });
 }
 
-// =======================
-// Inicialização
-// =======================
+// ===== Inicialização =====
 (async () => {
+  // exibe a home por padrão
   showView("home");
-
+  // verifica sessão atual
   const { data } = await supabase.auth.getSession();
   const user = data?.session?.user ?? null;
   await handleSession(user);
-
+  // carrega catálogo inicial
   await loadCatalog("todos");
 })();
