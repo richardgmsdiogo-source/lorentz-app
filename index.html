@@ -18,11 +18,14 @@
           </span>
         </div>
       </div>
+
+      <!-- NAV vira controle de "views" -->
       <nav class="main-nav">
-        <a href="#hero">Início</a>
-        <a href="#catalogo-card">Catálogo</a>
-        <a href="#auth-card">Área do cliente</a>
+        <a href="#" data-view="home" class="nav-link nav-active">Início</a>
+        <a href="#" data-view="catalogo" class="nav-link">Catálogo</a>
+        <a href="#" data-view="cliente" class="nav-link">Área do cliente</a>
       </nav>
+
       <div class="user-info">
         <span id="header-session-text">Visitante</span>
         <span id="header-role" class="badge-role hidden"></span>
@@ -31,7 +34,7 @@
     </div>
   </header>
 
-  <!-- Hero no estilo revista / blog -->
+  <!-- Hero sempre existe, mas quais blocos abaixo aparecem depende da view -->
   <section id="hero">
     <div class="hero-overlay"></div>
     <div class="hero-content">
@@ -42,15 +45,15 @@
         traduza a personalidade de quem celebra.
       </p>
       <div class="hero-actions">
-        <a href="#catalogo-card" class="btn-primary">Ver catálogo de decorações</a>
-        <a href="#auth-card" class="btn-ghost">Área do cliente</a>
+        <a href="#" class="btn-primary js-nav-view" data-view="catalogo">Ver catálogo de decorações</a>
+        <a href="#" class="btn-ghost js-nav-view" data-view="cliente">Área da noiva / cliente</a>
       </div>
     </div>
   </section>
 
   <main>
     <div class="content-grid">
-      <!-- Catálogo público -->
+      <!-- CATÁLOGO -->
       <section class="card" id="catalogo-card">
         <header class="card-header">
           <div>
@@ -76,21 +79,21 @@
 
         <p class="hint" style="margin-top: 14px">
           Os cenários exibidos aqui são carregados diretamente da tabela
-          <code>decoracoes</code> no Supabase. As imagens podem ser atualizadas pelo
+          <code>decoracoes</code> no Supabase. As imagens são armazenadas no
+          Storage (bucket <code>decoracoes</code>) e podem ser atualizadas pelo
           painel do administrador.
         </p>
       </section>
 
-      <!-- Login + áreas logadas -->
+      <!-- LOGIN + ADMIN + CLIENTE (ÁREA DO CLIENTE) -->
       <section class="card card-side" id="auth-card">
         <!-- LOGIN -->
         <div id="login-section">
           <p class="section-kicker">Área exclusiva</p>
-          <h2>Área do cliente e da equipe</h2>
+          <h2>Área da noiva / cliente</h2>
           <p>
-            Clientes acessam seus eventos, contratos e pagamentos. O administrador
-            usa o mesmo login para cadastrar novas decorações, planos e futuramente
-            pedidos e contratos.
+            As noivas acompanham seus orçamentos, contratos e pagamentos por aqui.
+            A equipe Lorentz usa a mesma área para gerenciar os eventos.
           </p>
 
           <form id="login-form" class="stack-form">
@@ -114,8 +117,8 @@
             </div>
             <button type="submit" class="btn-primary full">Entrar</button>
             <p class="hint">
-              O e-mail de login será usado futuramente para alertas automáticos
-              de pagamento e envio de contratos.
+              Peça seu cadastro à equipe Lorentz para acompanhar o seu grande dia
+              pelo portal.
             </p>
             <p id="login-status" class="status"></p>
           </form>
@@ -126,14 +129,14 @@
           <p class="section-kicker">Administração</p>
           <h2>Painel do administrador</h2>
           <p class="hint">
-            Cadastre novas decorações com fotos e planos da Lorentz diretamente no banco de dados.
+            Cadastre novas decorações com várias fotos diretamente no banco de dados.
           </p>
 
           <hr />
           <h3 class="subtitulo">Cadastrar decoração</h3>
           <p class="hint">
-            Grava na tabela <code>decoracoes</code> e envia a imagem para o Storage
-            (bucket <code>decoracoes</code>).
+            Grava na tabela <code>decoracoes</code> e envia as imagens para o Storage
+            (bucket <code>decoracoes</code>). A primeira foto vira a capa do catálogo.
           </p>
 
           <form id="form-decor" class="stack-form">
@@ -163,8 +166,13 @@
             </div>
 
             <div class="form-row">
-              <label for="decor-imagem">Imagem da decoração</label>
-              <input id="decor-imagem" type="file" accept="image/*" />
+              <label for="decor-imagem">Imagens da decoração</label>
+              <!-- MULTIPLAS FOTOS -->
+              <input id="decor-imagem" type="file" accept="image/*" multiple />
+              <span class="hint">
+                Você pode selecionar várias fotos. A primeira será usada como capa no catálogo;
+                todas aparecerão no carrossel ao abrir o cenário.
+              </span>
             </div>
 
             <button type="submit" class="btn-primary">Salvar decoração</button>
@@ -172,61 +180,37 @@
           </form>
 
           <hr />
-          <h3 class="subtitulo">Cadastrar plano</h3>
-          <p class="hint">Grava na tabela <code>planos</code>.</p>
-
-          <form id="form-plano" class="stack-form">
-            <div class="form-row">
-              <label for="plano-nome">Nome do plano</label>
-              <input
-                id="plano-nome"
-                placeholder="Ex.: Plano Ouro Casamento"
-                required
-              />
-            </div>
-
-            <div class="form-row">
-              <label for="plano-descricao">Descrição</label>
-              <input
-                id="plano-descricao"
-                placeholder="Resumo do que está incluso"
-              />
-            </div>
-
-            <div class="form-row">
-              <label for="plano-valor">Valor (R$)</label>
-              <input
-                id="plano-valor"
-                type="number"
-                step="0.01"
-                placeholder="1500.00"
-              />
-            </div>
-
-            <button type="submit" class="btn-primary">Salvar plano</button>
-            <p id="plano-status" class="status"></p>
-          </form>
-
-          <hr />
           <p class="hint">
-            Próxima etapa: cadastro de clientes, contratos, formas de pagamento,
-            alertas automáticos por e-mail e integrações com WhatsApp.
+            Próxima etapa: cadastro de clientes, orçamentos, contratos e pagamentos
+            usando as tabelas que já criamos no Supabase.
           </p>
         </div>
 
-        <!-- CLIENTE -->
+        <!-- CLIENTE (DEPOIS VAMOS LIGAR NAS TABELAS NOVAS) -->
         <div id="client-section" class="hidden client-panel">
           <p class="section-kicker">Minha festa</p>
           <h2>Meus eventos e pagamentos</h2>
           <p class="hint">
-            Aqui o cliente verá seus eventos contratados, contratos em PDF,
-            pagamentos realizados e a vencer. Esta área está preparada para
-            ser ligada às tabelas de contratos e pagamentos.
+            Aqui a noiva verá seus eventos contratados, orçamentos aprovados,
+            contratos em PDF e pagamentos realizados e a vencer.
           </p>
+
+          <div id="client-orcamentos" class="orcamentos-list">
+            <!-- Em breve: lista de orçamentos/contratos vindos do Supabase -->
+          </div>
         </div>
       </section>
     </div>
   </main>
+
+  <!-- MODAL PARA CARROSSEL DE FOTOS -->
+  <div id="decor-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog">
+      <button id="decor-modal-close" class="modal-close" aria-label="Fechar">&times;</button>
+      <div id="decor-modal-content"></div>
+    </div>
+  </div>
 
   <footer class="footer">
     <p>
