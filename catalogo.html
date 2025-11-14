@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Catálogo de Decorações • Lorentz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-logo">L</div>
+        <div class="brand-text">
+          <span class="brand-name">Lorentz Decorações de Festas e Eventos BH e Região</span>
+          <span class="brand-sub">
+            <a href="https://instagram.com/decoracoeslorentz" target="_blank">@decoracoeslorentz</a>
+          </span>
+        </div>
+      </div>
+      <nav class="main-nav">
+        <a href="index.html" class="nav-link">Início</a>
+        <a href="catalogo.html" class="nav-link nav-active">Catálogo</a>
+        <a href="cliente.html" class="nav-link">Área do cliente</a>
+      </nav>
+      <div class="user-info">
+        <span id="header-session-text">Visitante</span>
+        <span id="header-role" class="badge-role hidden"></span>
+        <button id="btn-logout" class="secondary hidden">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <section id="hero">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <p class="hero-kicker">PORTFÓLIO</p>
+      <h1>Catálogo de decorações</h1>
+      <p class="hero-subtitle">
+        Explore produções da Lorentz: casamentos clássicos, festas intimistas,
+        aniversários infantis e eventos corporativos.
+      </p>
+    </div>
+  </section>
+
+  <main>
+    <div class="content-grid">
+      <section class="card" id="catalogo-card">
+        <header class="card-header">
+          <p class="section-kicker">Portfólio</p>
+          <h2>Decorações</h2>
+          <p>Use as categorias para filtrar os cenários.</p>
+        </header>
+
+        <!-- Filtros por categoria (continuam iguais) -->
+        <nav class="catalog-tabs" aria-label="Categorias de decoração">
+          <button class="catalog-tab active" data-categoria="todos">Todas</button>
+          <button class="catalog-tab" data-categoria="Casamento">Casamento</button>
+          <button class="catalog-tab" data-categoria="Aniversário">Aniversário</button>
+          <button class="catalog-tab" data-categoria="15 anos">15 anos</button>
+          <button class="catalog-tab" data-categoria="Infantil">Infantil</button>
+        </nav>
+
+        <div id="catalogo-grid"></div>
+
+        <p class="hint" style="margin-top: 14px">
+          Os cenários são carregados da tabela <code>decoracoes</code> no Supabase.
+          As imagens vêm do Storage (bucket <code>decoracoes</code>).
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <!-- Modal para ver mais fotos -->
+  <div id="decor-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog">
+      <button id="decor-modal-close" class="modal-close" aria-label="Fechar">&times;</button>
+      <div id="decor-modal-content"></div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>
+      Lorentz Decorações de Festas e Eventos BH e Região • Instagram:
+      <a href="https://instagram.com/decoracoeslorentz" target="_blank">@decoracoeslorentz</a>
+    </p>
+    <p>
+      Criado por <a href="https://instagram.com/richard.gms" target="_blank">@richard.gms</a> •
+      WhatsApp: <a href="https://wa.me/5531986841995" target="_blank">31 98684-1995</a>
+    </p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
