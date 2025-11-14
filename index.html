@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Lorentz Decorações - App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>L&L Decorações - App do Cliente</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
     :root {
@@ -11,27 +11,36 @@
       --card: #111320;
       --card2: #181b2a;
       --accent: #ff4f8b;
-      --accent-soft: rgba(255, 79, 139, 0.16);
+      --accent-soft: rgba(255, 79, 139, 0.18);
       --text: #f5f7ff;
       --muted: #a4adc4;
       --border: rgba(255, 255, 255, 0.08);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
     body {
       min-height: 100vh;
       background: radial-gradient(circle at top, #151932 0, #05060b 55%);
       color: var(--text);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
       display: flex;
       flex-direction: column;
     }
     header {
       border-bottom: 1px solid var(--border);
-      padding: 12px 20px;
+      padding: 12px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: linear-gradient(90deg, rgba(10,12,25,0.95), rgba(10,7,18,0.95));
+      background: linear-gradient(
+        90deg,
+        rgba(10, 12, 25, 0.96),
+        rgba(10, 7, 18, 0.96)
+      );
       position: sticky;
       top: 0;
       z-index: 10;
@@ -45,7 +54,13 @@
       width: 40px;
       height: 40px;
       border-radius: 14px;
-      background: radial-gradient(circle at 30% 0, #ffd3f0 0, #ff4f8b 30%, #32153f 70%, #05060b 100%);
+      background: radial-gradient(
+        circle at 30% 0,
+        #ffd3f0 0,
+        #ff4f8b 30%,
+        #32153f 70%,
+        #05060b 100%
+      );
       display: flex;
       align-items: center;
       justify-content: center;
@@ -61,10 +76,9 @@
       letter-spacing: 0.03em;
     }
     .brand-text span:last-child {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--muted);
     }
-
     .user-info {
       font-size: 13px;
       display: flex;
@@ -72,12 +86,15 @@
       gap: 10px;
       color: var(--muted);
     }
-    .pill {
+    .badge-role {
+      font-size: 11px;
+      padding: 3px 8px;
       border-radius: 999px;
-      padding: 4px 10px;
-      font-size: 12px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.02);
+      background: var(--accent-soft);
+      color: #ffdbea;
+      border: 1px solid rgba(255, 79, 139, 0.4);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
     }
     button {
       border: none;
@@ -88,12 +105,13 @@
       background: var(--accent);
       color: #fff;
       font-weight: 500;
-      transition: transform .08s ease, box-shadow .08s ease, background .08s ease;
-      box-shadow: 0 8px 20px rgba(255,79,139,0.35);
+      transition: transform 0.08s ease, box-shadow 0.08s ease,
+        background 0.08s ease;
+      box-shadow: 0 8px 20px rgba(255, 79, 139, 0.35);
     }
     button:hover {
       transform: translateY(-1px);
-      box-shadow: 0 10px 26px rgba(255,79,139,0.45);
+      box-shadow: 0 10px 26px rgba(255, 79, 139, 0.45);
     }
     button.secondary {
       background: transparent;
@@ -102,11 +120,11 @@
       border: 1px solid var(--border);
     }
     main {
-      max-width: 1080px;
+      max-width: 1100px;
       margin: 18px auto 24px;
       padding: 0 16px;
       display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(320px, 1.1fr);
+      grid-template-columns: minmax(0, 2.1fr) minmax(320px, 1.1fr);
       gap: 18px;
     }
     @media (max-width: 840px) {
@@ -115,12 +133,16 @@
       }
     }
     .card {
-      background: radial-gradient(circle at top left, rgba(255,79,139,0.18), transparent 55%);
+      background: radial-gradient(
+        circle at top left,
+        rgba(255, 79, 139, 0.18),
+        transparent 55%
+      );
       border-radius: 20px;
       border: 1px solid var(--border);
       padding: 16px 16px 14px;
       background-color: var(--card);
-      box-shadow: 0 18px 45px rgba(0,0,0,0.45);
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
     }
     .card h2 {
       font-size: 18px;
@@ -129,9 +151,8 @@
     .card p {
       font-size: 13px;
       color: var(--muted);
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
-
     /* Catálogo */
     #catalogo-grid {
       display: grid;
@@ -163,16 +184,15 @@
       font-size: 12px;
       color: var(--muted);
     }
-
-    /* Login / Área logada */
+    /* Formulários */
     form {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
       margin-top: 8px;
     }
     label {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--muted);
     }
     input {
@@ -180,13 +200,13 @@
       border: 1px solid var(--border);
       background: #050711;
       color: var(--text);
-      padding: 8px 10px;
-      font-size: 14px;
+      padding: 7px 9px;
+      font-size: 13px;
       outline: none;
     }
     input:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 1px rgba(255,79,139,0.35);
+      box-shadow: 0 0 0 1px rgba(255, 79, 139, 0.35);
     }
     .hint {
       font-size: 11px;
@@ -194,272 +214,397 @@
     }
     .status {
       font-size: 12px;
-      margin-top: 6px;
+      margin-top: 4px;
     }
-    .status.error { color: #ff8b8b; }
-    .status.ok { color: #7affc8; }
-
-    .hidden { display: none !important; }
-
-    .badge-role {
-      font-size: 11px;
-      padding: 2px 7px;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      color: #ffdbea;
-      border: 1px solid rgba(255,79,139,0.4);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+    .status.error {
+      color: #ff8b8b;
     }
-
+    .status.ok {
+      color: #7affc8;
+    }
+    .hidden {
+      display: none !important;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 10px 0 6px;
+    }
     .footer {
       text-align: center;
       font-size: 11px;
       color: var(--muted);
       padding: 10px 0 16px;
-      border-top: 1px solid rgba(255,255,255,0.04);
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
       margin: 0 12px;
     }
   </style>
 </head>
 <body>
-<header>
-  <div class="brand">
-    <div class="brand-logo">L&L</div>
-    <div class="brand-text">
-      <span>L&L Decorações</span>
-      <span>Casamentos • 15 anos • Aniversários</span>
+  <header>
+    <div class="brand">
+      <div class="brand-logo">L&L</div>
+      <div class="brand-text">
+        <span>L&L Decorações</span>
+        <span>Casamentos • 15 anos • Aniversários</span>
+      </div>
     </div>
+    <div class="user-info">
+      <span id="header-session-text">Visitante</span>
+      <span id="header-role" class="badge-role hidden"></span>
+      <button id="btn-logout" class="secondary hidden">Sair</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Coluna esquerda: catálogo público -->
+    <section class="card" id="catalogo-card">
+      <h2>Catálogo de decorações</h2>
+      <p>
+        Veja algumas das produções da L&L Decorações. O cenário passa, mas as
+        fotos ficam para sempre.
+      </p>
+      <div id="catalogo-grid">
+        <!-- itens via JS -->
+      </div>
+      <p class="hint" style="margin-top: 10px">
+        Os dados são carregados da tabela <code>decoracoes</code> no Supabase.
+      </p>
+    </section>
+
+    <!-- Coluna direita: login + área logada -->
+    <section class="card" id="auth-card">
+      <!-- LOGIN -->
+      <div id="login-section">
+        <h2>Área do cliente</h2>
+        <p>
+          Acesse com o e-mail e senha cadastrados. O administrador usa este
+          mesmo login para gerenciar contratos.
+        </p>
+
+        <form id="login-form">
+          <div>
+            <label for="email">E-mail</label>
+            <input
+              id="email"
+              type="email"
+              required
+              placeholder="seuemail@exemplo.com"
+            />
+          </div>
+          <div>
+            <label for="password">Senha</label>
+            <input
+              id="password"
+              type="password"
+              required
+              placeholder="Sua senha"
+            />
+          </div>
+          <button type="submit">Entrar</button>
+          <p class="hint">
+            Use o e-mail e senha cadastrados no painel da Supabase (ou criados
+            pelo administrador).
+          </p>
+          <p id="login-status" class="status"></p>
+        </form>
+      </div>
+
+      <!-- ADMIN -->
+      <div id="admin-section" class="hidden">
+        <h2>Painel do administrador</h2>
+        <p class="hint">
+          Aqui você gerencia o catálogo e os planos. Depois evoluímos para
+          contratos e pagamentos.
+        </p>
+
+        <hr />
+        <h3 style="font-size: 14px; margin-bottom: 4px">
+          Cadastrar decoração
+        </h3>
+        <p class="hint">Grava na tabela <code>decoracoes</code>.</p>
+
+        <form id="form-decor">
+          <label for="decor-categoria">Categoria</label>
+          <input
+            id="decor-categoria"
+            placeholder="Casamento, 15 anos, Aniversário..."
+          />
+
+          <label for="decor-titulo" style="margin-top: 2px">Título</label>
+          <input
+            id="decor-titulo"
+            placeholder="Ex.: Boho Chic no Campo"
+            required
+          />
+
+          <label for="decor-descricao" style="margin-top: 2px"
+            >Descrição</label
+          >
+          <input
+            id="decor-descricao"
+            placeholder="Descrição rápida da decoração"
+          />
+
+          <button type="submit" style="margin-top: 6px">
+            Salvar decoração
+          </button>
+          <p id="decor-status" class="status"></p>
+        </form>
+
+        <hr />
+        <h3 style="font-size: 14px; margin-bottom: 4px">Cadastrar plano</h3>
+        <p class="hint">Grava na tabela <code>planos</code>.</p>
+
+        <form id="form-plano">
+          <label for="plano-nome">Nome do plano</label>
+          <input
+            id="plano-nome"
+            placeholder="Ex.: Plano Ouro Casamento"
+            required
+          />
+
+          <label for="plano-descricao" style="margin-top: 2px"
+            >Descrição</label
+          >
+          <input
+            id="plano-descricao"
+            placeholder="Resumo do que está incluso"
+          />
+
+          <label for="plano-valor" style="margin-top: 2px"
+            >Valor mensal (R$)</label
+          >
+          <input
+            id="plano-valor"
+            type="number"
+            step="0.01"
+            placeholder="1500.00"
+          />
+
+          <button type="submit" style="margin-top: 6px">Salvar plano</button>
+          <p id="plano-status" class="status"></p>
+        </form>
+
+        <hr />
+        <p class="hint">
+          Próximos módulos (depois): cadastro de clientes, contratos,
+          pagamentos, notificações etc.
+        </p>
+      </div>
+
+      <!-- CLIENTE -->
+      <div id="client-section" class="hidden">
+        <h2>Minha festa / meu evento</h2>
+        <p class="hint">
+          Aqui você verá o plano contratado, data do evento, local e situação
+          dos pagamentos.
+        </p>
+        <p class="hint">
+          Nesta versão base, a área do cliente ainda é só visual, sem dados
+          reais de contrato ligados.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <div class="footer">
+    Criado por Richard Alex @richard.gms • App L&L Decorações (versão base com
+    Supabase)
   </div>
-  <div class="user-info">
-    <span id="header-session-text">Visitante</span>
-    <span id="header-role" class="badge-role hidden"></span>
-    <button id="btn-logout" class="secondary hidden">Sair</button>
-  </div>
-</header>
 
-<main>
-  <!-- Coluna esquerda: catálogo público -->
-  <section class="card" id="catalogo-card">
-    <h2>Catálogo de decorações</h2>
-    <p>Veja algumas das montagens que já realizamos. Seus convidados lembram da festa, mas o cenário fica pra sempre nas fotos.</p>
-    <div id="catalogo-grid">
-      <!-- itens virão via JS -->
-    </div>
-    <p class="hint" style="margin-top:10px;">Esses dados vêm direto do banco Supabase (tabela <code>decoracoes</code>).</p>
-  </section>
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-  <!-- Coluna direita: login / área do cliente & admin -->
-  <section class="card" id="auth-card">
-    <div id="login-section">
-      <h2>Área do cliente</h2>
-      <p>Acesse com o e-mail e senha cadastrados. O admin usa esse mesmo login para gerenciar contratos.</p>
+    /* 🔧 TROCAR AQUI PELOS DADOS DO SEU PROJETO SUPABASE */
+    const SUPABASE_URL = 'https://tsdrlbkrkjaxzpdxtmoa.supabase.co';       // 🔁 TROCAR
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzZHJsYmtya2pheHpwZHh0bW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMjY0NjYsImV4cCI6MjA3NzcwMjQ2Nn0.Jx0ot29QIb2bi-wcTL6T69J6oBHoEFbR237Rtf3MO0g';                   // 🔁 TROCAR
 
-      <form id="login-form">
-        <div>
-          <label for="email">E-mail</label>
-          <input id="email" type="email" required placeholder="seuemail@exemplo.com">
-        </div>
-        <div>
-          <label for="password">Senha</label>
-          <input id="password" type="password" required placeholder="Sua senha">
-        </div>
-        <button type="submit">Entrar</button>
-        <p class="hint">Use o e-mail e senha que você cadastrou no painel da Supabase.</p>
-        <p id="login-status" class="status"></p>
-      </form>
-    </div>
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    <div id="admin-section" class="hidden">
-      <h2>Painel do administrador</h2>
-      <p class="hint">Aqui depois vamos colocar: cadastro de clientes, contratos, pagamentos, etc.</p>
-      <ul style="margin-top:8px;font-size:13px;color:var(--muted);padding-left:18px;">
-        <li>Listar clientes e contratos</li>
-        <li>Registrar novos eventos</li>
-        <li>Controlar pagamentos</li>
-      </ul>
-    </div>
+    // Elementos da interface
+    const catalogoGrid = document.getElementById("catalogo-grid");
 
-    <div id="client-section" class="hidden">
-      <h2>Área do cliente</h2>
-      <p class="hint">Aqui depois vamos mostrar o plano contratado, detalhes do evento e situação dos pagamentos.</p>
-    </div>
-  </section>
-</main>
+    const loginForm = document.getElementById("login-form");
+    const loginStatus = document.getElementById("login-status");
 
-<div class="footer">
-  Criado por Richard Alex @richard.gms • App L&L Decorações (versão base com Supabase)
-</div>
+    const loginSection = document.getElementById("login-section");
+    const adminSection = document.getElementById("admin-section");
+    const clientSection = document.getElementById("client-section");
 
-<script type="module">
-  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    const headerSessionText = document.getElementById("header-session-text");
+    const headerRole = document.getElementById("header-role");
+    const btnLogout = document.getElementById("btn-logout");
 
-  const SUPABASE_URL = 'https://tsdrlbkrkjaxzpdxtmoa.supabase.co';       // 🔁 TROCAR
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzZHJsYmtya2pheHpwZHh0bW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMjY0NjYsImV4cCI6MjA3NzcwMjQ2Nn0.Jx0ot29QIb2bi-wcTL6T69J6oBHoEFbR237Rtf3MO0g';                   // 🔁 TROCAR
+    // Admin forms
+    const formDecor = document.getElementById("form-decor");
+    const decorCategoria = document.getElementById("decor-categoria");
+    const decorTitulo = document.getElementById("decor-titulo");
+    const decorDescricao = document.getElementById("decor-descricao");
+    const decorStatus = document.getElementById("decor-status");
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const formPlano = document.getElementById("form-plano");
+    const planoNome = document.getElementById("plano-nome");
+    const planoDescricao = document.getElementById("plano-descricao");
+    const planoValor = document.getElementById("plano-valor");
+    const planoStatus = document.getElementById("plano-status");
 
-  const catalogoGrid = document.getElementById('catalogo-grid');
-  const loginForm = document.getElementById('login-form');
-  const loginStatus = document.getElementById('login-status');
-
-  const loginSection = document.getElementById('login-section');
-  const adminSection = document.getElementById('admin-section');
-  const clientSection = document.getElementById('client-section');
-
-  const headerSessionText = document.getElementById('header-session-text');
-  const headerRole = document.getElementById('header-role');
-  const btnLogout = document.getElementById('btn-logout');
-
-  function showStatus(message, type = 'ok') {
-    loginStatus.textContent = message;
-    loginStatus.className = 'status ' + (type === 'error' ? 'error' : 'ok');
-  }
-
-  function setLoggedOutUI() {
-    loginSection.classList.remove('hidden');
-    adminSection.classList.add('hidden');
-    clientSection.classList.add('hidden');
-    headerSessionText.textContent = 'Visitante';
-    headerRole.classList.add('hidden');
-    btnLogout.classList.add('hidden');
-  }
-
-  function setAdminUI(name) {
-    loginSection.classList.add('hidden');
-    adminSection.classList.remove('hidden');
-    clientSection.classList.add('hidden');
-    headerSessionText.textContent = name ? name : 'Administrador';
-    headerRole.textContent = 'ADMIN';
-    headerRole.classList.remove('hidden');
-    btnLogout.classList.remove('hidden');
-  }
-
-  function setClientUI(name) {
-    loginSection.classList.add('hidden');
-    adminSection.classList.add('hidden');
-    clientSection.classList.remove('hidden');
-    headerSessionText.textContent = name || 'Cliente';
-    headerRole.textContent = 'CLIENTE';
-    headerRole.classList.remove('hidden');
-    btnLogout.classList.remove('hidden');
-  }
-
-  async function loadCatalog() {
-    const { data, error } = await supabase
-      .from('decoracoes')
-      .select('id, categoria, titulo, descricao, ativo')
-      .eq('ativo', true)
-      .order('id', { ascending: false });
-
-    catalogoGrid.innerHTML = '';
-
-    if (error) {
-      const div = document.createElement('div');
-      div.className = 'decor-card';
-      div.innerHTML = '<span class="decor-title">Erro ao carregar catálogo</span><p class="decor-desc">'
-        + (error.message || '') + '</p>';
-      catalogoGrid.appendChild(div);
-      return;
+    function setLoggedOutUI() {
+      loginSection.classList.remove("hidden");
+      adminSection.classList.add("hidden");
+      clientSection.classList.add("hidden");
+      headerSessionText.textContent = "Visitante";
+      headerRole.classList.add("hidden");
+      btnLogout.classList.add("hidden");
     }
 
-    if (!data || data.length === 0) {
-      const div = document.createElement('div');
-      div.className = 'decor-card';
-      div.innerHTML = '<span class="decor-title">Sem decorações cadastradas ainda</span><p class="decor-desc">Use o painel admin depois para cadastrar suas produções.</p>';
-      catalogoGrid.appendChild(div);
-      return;
+    function setAdminUI(name) {
+      loginSection.classList.add("hidden");
+      adminSection.classList.remove("hidden");
+      clientSection.classList.add("hidden");
+      headerSessionText.textContent = name || "Administrador";
+      headerRole.textContent = "ADMIN";
+      headerRole.classList.remove("hidden");
+      btnLogout.classList.remove("hidden");
     }
 
-    for (const deco of data) {
-      const card = document.createElement('article');
-      card.className = 'decor-card';
-      card.innerHTML = `
-        <div class="decor-tag">${deco.categoria || 'Evento'}</div>
-        <div class="decor-title">${deco.titulo}</div>
-        <div class="decor-desc">${deco.descricao || ''}</div>
-      `;
-      catalogoGrid.appendChild(card);
-    }
-  }
-
-  async function handleSession(user) {
-    if (!user) {
-      setLoggedOutUI();
-      return;
+    function setClientUI(name) {
+      loginSection.classList.add("hidden");
+      adminSection.classList.add("hidden");
+      clientSection.classList.remove("hidden");
+      headerSessionText.textContent = name || "Cliente";
+      headerRole.textContent = "CLIENTE";
+      headerRole.classList.remove("hidden");
+      btnLogout.classList.remove("hidden");
     }
 
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('name, role')
-      .eq('id', user.id)
-      .maybeSingle();
+    async function loadCatalog() {
+      const { data, error } = await supabase
+        .from("decoracoes")
+        .select("id, categoria, titulo, descricao, ativo")
+        .eq("ativo", true)
+        .order("id", { ascending: false });
 
-    if (error) {
-      console.error('Erro ao carregar profile:', error);
-      setLoggedOutUI();
-      return;
+      catalogoGrid.innerHTML = "";
+
+      if (error) {
+        const div = document.createElement("div");
+        div.className = "decor-card";
+        div.innerHTML =
+          '<div class="decor-title">Erro ao carregar catálogo</div>' +
+          '<div class="decor-desc">' +
+          (error.message || "") +
+          "</div>";
+        catalogoGrid.appendChild(div);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        const div = document.createElement("div");
+        div.className = "decor-card";
+        div.innerHTML =
+          '<div class="decor-title">Sem decorações cadastradas</div>' +
+          '<div class="decor-desc">Use o painel do administrador para cadastrar suas produções.</div>';
+        catalogoGrid.appendChild(div);
+        return;
+      }
+
+      for (const deco of data) {
+        const card = document.createElement("article");
+        card.className = "decor-card";
+        card.innerHTML = `
+          <div class="decor-tag">${deco.categoria || "Evento"}</div>
+          <div class="decor-title">${deco.titulo}</div>
+          <div class="decor-desc">${deco.descricao || ""}</div>
+        `;
+        catalogoGrid.appendChild(card);
+      }
     }
 
-    const name = profile?.name || user.email;
+    async function handleSession(user) {
+      if (!user) {
+        setLoggedOutUI();
+        return;
+      }
 
-    if (profile?.role === 'admin') {
-      setAdminUI(name);
-    } else {
-      setClientUI(name);
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("name, role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Erro ao carregar profile:", error);
+        setLoggedOutUI();
+        return;
+      }
+
+      const name = profile?.name || user.email;
+
+      if (profile?.role === "admin") {
+        setAdminUI(name);
+      } else {
+        setClientUI(name);
+      }
     }
-  }
 
-  loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    loginStatus.textContent = '';
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
+    // Login
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      loginStatus.textContent = "";
+      loginStatus.className = "status";
 
-    showStatus('Autenticando...', 'ok');
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
+      if (!email || !password) {
+        loginStatus.textContent = "Preencha e-mail e senha.";
+        loginStatus.className = "status error";
+        return;
+      }
+
+      loginStatus.textContent = "Autenticando...";
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error(error);
+        loginStatus.textContent = "Erro ao entrar: " + error.message;
+        loginStatus.className = "status error";
+        return;
+      }
+
+      const user = data.user;
+      if (!user) {
+        loginStatus.textContent = "Não foi possível recuperar o usuário.";
+        loginStatus.className = "status error";
+        return;
+      }
+
+      loginStatus.textContent = "Login realizado com sucesso!";
+      loginStatus.className = "status ok";
+      await handleSession(user);
     });
 
-    if (error) {
-      console.error(error);
-      showStatus('Erro ao entrar: ' + error.message, 'error');
-      return;
-    }
-
-    const user = data.user;
-    if (!user) {
-      showStatus('Não foi possível recuperar o usuário.', 'error');
-      return;
-    }
-
-    showStatus('Login realizado com sucesso!', 'ok');
-    await handleSession(user);
-  });
-
-  btnLogout.addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    setLoggedOutUI();
-  });
-
-  // Quando a página carrega: busca catálogo + verifica se já tem sessão
-  (async () => {
-    await loadCatalog();
-
-    const { data } = await supabase.auth.getSession();
-    const session = data?.session;
-    if (session?.user) {
-      await handleSession(session.user);
-    } else {
+    // Logout
+    btnLogout.addEventListener("click", async () => {
+      await supabase.auth.signOut();
       setLoggedOutUI();
-    }
-
-    supabase.auth.onAuthStateChange((_event, session) => {
-      handleSession(session?.user ?? null);
     });
-  })();
-</script>
-</body>
-</html>
+
+    // Admin: cadastrar decoração
+    formDecor.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      decorStatus.textContent = "";
+      decorStatus.className = "status";
+
+      if (!decorTitulo.value.trim()) {
+        decorStatus.textContent = "Informe pelo menos o título.";
+        decorStatus.className = "status error";
+        return;
+      }
+
+      de
