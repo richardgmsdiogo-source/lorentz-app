@@ -4,27 +4,28 @@
   <meta charset="UTF-8" />
   <title>Lorentz Decorações de Festas e Eventos BH e Região</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- Arquivo de estilos principal -->
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Topbar com o nome da empresa, Instagram e navegação -->
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
-        <!-- Logotipo placeholder; se tiver uma imagem real basta substituir pela tag <img> -->
         <div class="brand-logo">L</div>
         <div class="brand-text">
           <span class="brand-name">Lorentz Decorações de Festas e Eventos BH e Região</span>
-          <span class="brand-sub"><a href="https://instagram.com/decoracoeslorentz" target="_blank">@decoracoeslorentz</a></span>
+          <span class="brand-sub">
+            <a href="https://instagram.com/decoracoeslorentz" target="_blank">@decoracoeslorentz</a>
+          </span>
         </div>
       </div>
-      <!-- Navegação: links atualizam apenas a view visível dentro do mesmo documento -->
+
+      <!-- Agora navegação é página MESMO -->
       <nav class="main-nav">
-        <a href="#" data-view="home" class="nav-link nav-active">Início</a>
-        <a href="#" data-view="catalogo" class="nav-link">Catálogo</a>
-        <a href="#" data-view="cliente" class="nav-link">Área do cliente</a>
+        <a href="index.html" class="nav-link nav-active">Início</a>
+        <a href="catalogo.html" class="nav-link">Catálogo</a>
+        <a href="cliente.html" class="nav-link">Área do cliente</a>
       </nav>
+
       <div class="user-info">
         <span id="header-session-text">Visitante</span>
         <span id="header-role" class="badge-role hidden"></span>
@@ -33,7 +34,7 @@
     </div>
   </header>
 
-  <!-- Seção de destaque com foto de fundo. Os links usam data-view para navegar dentro do app -->
+  <!-- Hero -->
   <section id="hero">
     <div class="hero-overlay"></div>
     <div class="hero-content">
@@ -43,165 +44,54 @@
         Cenários planejados nos mínimos detalhes, para que cada mesa, flor e luz traduza a personalidade de quem celebra.
       </p>
       <div class="hero-actions">
-        <a href="#" class="btn-primary js-nav-view" data-view="catalogo">Ver catálogo de decorações</a>
-        <a href="#" class="btn-ghost js-nav-view" data-view="cliente">Área da noiva / cliente</a>
+        <a href="catalogo.html" class="btn-primary">Ver catálogo de decorações</a>
+        <a href="cliente.html" class="btn-ghost">Área da noiva / cliente</a>
       </div>
     </div>
   </section>
 
+  <!-- Na home você pode manter uma prévia simples do catálogo / área cliente, ou só o hero mesmo.
+       Vou deixar só um texto curto para ficar limpo -->
   <main>
     <div class="content-grid">
-      <!-- Catálogo: carrega as decorações da tabela decoracoes -->
-      <section class="card" id="catalogo-card">
-        <header class="card-header">
-          <div>
-            <p class="section-kicker">Portfólio</p>
-            <h2>Catálogo de decorações</h2>
-            <p>
-              Explore produções da Lorentz: casamentos clássicos, festas intimistas,
-              aniversários infantis e eventos corporativos.
-            </p>
-          </div>
-        </header>
-        <!-- Abas de categoria para filtrar o catálogo -->
-        <nav class="catalog-tabs" aria-label="Categorias de decoração">
-          <button class="catalog-tab active" data-categoria="todos">Todas</button>
-          <button class="catalog-tab" data-categoria="Casamento">Casamento</button>
-          <button class="catalog-tab" data-categoria="Aniversário">Aniversário</button>
-          <button class="catalog-tab" data-categoria="15 anos">15 anos</button>
-          <button class="catalog-tab" data-categoria="Infantil">Infantil</button>
-        </nav>
-        <div id="catalogo-grid"></div>
-        <p class="hint" style="margin-top: 14px">
-          Os cenários exibidos aqui são carregados diretamente da tabela
-          <code>decoracoes</code> no Supabase. As imagens são armazenadas no Storage (bucket
-          <code>decoracoes</code>) e podem ser atualizadas pelo painel do administrador.
+      <section class="card">
+        <p class="section-kicker">Portfólio</p>
+        <h2>Conheça nossas decorações</h2>
+        <p>
+          Acesse o catálogo completo para ver cenários de casamentos, 15 anos, aniversários
+          e eventos corporativos já realizados pela Lorentz.
         </p>
+        <div style="margin-top:12px">
+          <a href="catalogo.html" class="btn-primary">Abrir catálogo completo</a>
+        </div>
       </section>
-      <!-- Área do cliente: login, painel administrativo e painel da noiva -->
-      <section class="card card-side" id="auth-card">
-        <!-- Formulário de login -->
-        <div id="login-section">
-          <p class="section-kicker">Área exclusiva</p>
-          <h2>Área da noiva / cliente</h2>
-          <p>
-            As noivas acompanham seus orçamentos, contratos e pagamentos por aqui.
-            A equipe Lorentz usa a mesma área para gerenciar os eventos.
-          </p>
-          <form id="login-form" class="stack-form">
-            <div class="form-row">
-              <label for="email">E-mail (login)</label>
-              <input
-                id="email"
-                type="email"
-                required
-                placeholder="seuemail@exemplo.com"
-              />
-            </div>
-            <div class="form-row">
-              <label for="password">Senha</label>
-              <input
-                id="password"
-                type="password"
-                required
-                placeholder="Sua senha"
-              />
-            </div>
-            <button type="submit" class="btn-primary full">Entrar</button>
-            <p class="hint">
-              Peça seu cadastro à equipe Lorentz para acompanhar o seu grande dia pelo portal.
-            </p>
-            <p id="login-status" class="status"></p>
-          </form>
-        </div>
-        <!-- Painel do administrador -->
-        <div id="admin-section" class="hidden admin-panel">
-          <p class="section-kicker">Administração</p>
-          <h2>Painel do administrador</h2>
-          <p class="hint">
-            Cadastre novas decorações com várias fotos diretamente no banco de dados.
-          </p>
-          <hr />
-          <h3 class="subtitulo">Cadastrar decoração</h3>
-          <p class="hint">
-            Grava na tabela <code>decoracoes</code> e envia as imagens para o Storage (bucket
-            <code>decoracoes</code>). A primeira foto vira a capa do catálogo.
-          </p>
-          <form id="form-decor" class="stack-form">
-            <div class="form-row">
-              <label for="decor-categoria">Categoria</label>
-              <input
-                id="decor-categoria"
-                placeholder="Casamento, Aniversário, 15 anos, Infantil..."
-              />
-            </div>
-            <div class="form-row">
-              <label for="decor-titulo">Título</label>
-              <input
-                id="decor-titulo"
-                placeholder="Ex.: Casamento Clássico em Branco e Dourado"
-                required
-              />
-            </div>
-            <div class="form-row">
-              <label for="decor-descricao">Descrição</label>
-              <input
-                id="decor-descricao"
-                placeholder="Descrição rápida da decoração"
-              />
-            </div>
-            <div class="form-row">
-              <label for="decor-imagens">Imagens da decoração</label>
-              <input id="decor-imagem" type="file" accept="image/*" multiple />
-              <span class="hint">
-                Você pode selecionar várias fotos. A primeira será usada como capa no catálogo;
-                todas aparecem no carrossel ao abrir o cenário.
-              </span>
-            </div>
-            <button type="submit" class="btn-primary">Salvar decoração</button>
-            <p id="decor-status" class="status"></p>
-          </form>
-          <hr />
-          <p class="hint">
-            Próxima etapa: cadastro de clientes, orçamentos, contratos e pagamentos usando as
-            tabelas que já criamos no Supabase.
-          </p>
-        </div>
-        <!-- Painel do cliente (noiva). Em breve ligado nas tabelas de orçamentos e contratos -->
-        <div id="client-section" class="hidden client-panel">
-          <p class="section-kicker">Minha festa</p>
-          <h2>Meus eventos e pagamentos</h2>
-          <p class="hint">
-            Aqui a noiva verá seus eventos contratados, orçamentos aprovados,
-            contratos em PDF e pagamentos realizados e a vencer.
-          </p>
-          <div id="client-orcamentos" class="orcamentos-list">
-            <!-- Em breve: lista de orçamentos/contratos vindos do Supabase -->
-          </div>
+
+      <section class="card">
+        <p class="section-kicker">Área exclusiva</p>
+        <h2>Acompanhe seu orçamento</h2>
+        <p>
+          Depois de falar com a equipe via WhatsApp, você recebe um acesso para
+          acompanhar seu orçamento, contrato e pagamentos pelo portal.
+        </p>
+        <div style="margin-top:12px">
+          <a href="cliente.html" class="btn-primary">Ir para a área do cliente</a>
         </div>
       </section>
     </div>
   </main>
-  <!-- Modal para exibir imagens extras como um carrossel -->
-  <div id="decor-modal" class="modal hidden">
-    <div class="modal-backdrop"></div>
-    <div class="modal-dialog">
-      <button id="decor-modal-close" class="modal-close" aria-label="Fechar">&times;</button>
-      <div id="decor-modal-content"></div>
-    </div>
-  </div>
-  <!-- Rodapé com créditos e contatos -->
+
   <footer class="footer">
     <p>
       Lorentz Decorações de Festas e Eventos BH e Região • Instagram:
       <a href="https://instagram.com/decoracoeslorentz" target="_blank">@decoracoeslorentz</a>
     </p>
     <p>
-      Criado por <a href="https://instagram.com/richard.gms" target="_blank">@richard.gms</a> • WhatsApp:
-      <a href="https://wa.me/5531986841995" target="_blank">31 98684-1995</a>
+      Criado por <a href="https://instagram.com/richard.gms" target="_blank">@richard.gms</a> •
+      WhatsApp: <a href="https://wa.me/5531986841995" target="_blank">31 98684-1995</a>
     </p>
   </footer>
-  <!-- Script principal do site -->
+
+  <!-- Mesmo JS, ele só vai fazer o que existir na página -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
