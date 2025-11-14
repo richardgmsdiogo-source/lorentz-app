@@ -1,13 +1,16 @@
 // Código principal do portal Lorentz.
-// Agora ele funciona em QUALQUER página (index, catalogo, cliente) sem tentar
-// esconder/mostrar seções. Só faz algo se o elemento existir na página.
+// Funciona em QUALQUER página (index, catalogo, cliente):
+// só executa o que tiver elementos na página atual.
 
 import { supabase } from "./config.js";
 
 // ===== Seleção de elementos (podem ser null em algumas páginas) =====
+
+// Catálogo
 const catalogoGrid = document.getElementById("catalogo-grid");
 const catalogTabs = document.querySelectorAll(".catalog-tab");
 
+// Login / sessão
 const loginForm = document.getElementById("login-form");
 const loginStatus = document.getElementById("login-status");
 
@@ -27,10 +30,26 @@ const decorDescricao = document.getElementById("decor-descricao");
 const decorImagem = document.getElementById("decor-imagem");
 const decorStatus = document.getElementById("decor-status");
 
-// Modal do catálogo
+// Modal do catálogo (usado em catalogo.html)
 const decorModal = document.getElementById("decor-modal");
 const decorModalClose = document.getElementById("decor-modal-close");
 const decorModalContent = document.getElementById("decor-modal-content");
+
+// Admin: gestão de clientes
+const adminClientesList = document.getElementById("admin-clientes-list");
+const adminClienteDetalhe = document.getElementById("admin-cliente-detalhe");
+const clienteNomeTitulo = document.getElementById("cliente-nome-titulo");
+const clienteInfoBasica = document.getElementById("cliente-info-basica");
+
+const formDocumentos = document.getElementById("form-documentos");
+const orcamentoPdfInput = document.getElementById("orcamento-pdf");
+const contratoPdfInput = document.getElementById("contrato-pdf");
+const formaPagamentoInput = document.getElementById("forma-pagamento");
+const documentosStatus = document.getElementById("documentos-status");
+const btnResetSenha = document.getElementById("btn-reset-senha");
+
+let clienteSelecionado = null;
+let orcamentoAtual = null;
 
 // ===== UI de sessão (guardando nulls) =====
 function setLoggedOutUI() {
@@ -88,8 +107,11 @@ async function handleSession(user) {
   }
 
   const name = profile?.name || user.email;
+
   if (profile?.role === "admin") {
     setAdminUI(name);
+    // se estiver em uma página com gestão de clientes, carrega
+    await loadAdminClientes();
   } else {
     setClientUI(name);
   }
@@ -265,7 +287,10 @@ if (loginForm) {
 
     loginStatus.textContent = "Autenticando...";
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
     if (error) {
       console.error(error);
@@ -341,7 +366,9 @@ if (formDecor) {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const ext = file.name.split(".").pop();
-        const unique = `${Date.now()}-${i}-${Math.random().toString(36).substring(2, 8)}`;
+        const unique = `${Date.now()}-${i}-${Math.random()
+          .toString(36)
+          .substring(2, 8)}`;
         const path = `${decoracaoId}/${unique}.${ext}`;
 
         const { error: uploadError } = await supabase.storage
@@ -363,7 +390,10 @@ if (formDecor) {
     }
 
     if (capaUrl) {
-      await supabase.from("decoracoes").update({ imagem_url: capaUrl }).eq("id", decoracaoId);
+      await supabase
+        .from("decoracoes")
+        .update({ imagem_url: capaUrl })
+        .eq("id", decoracaoId);
     }
 
     decorStatus.textContent = "Decoração cadastrada com sucesso!";
@@ -374,6 +404,249 @@ if (formDecor) {
     const activeTab = document.querySelector(".catalog-tab.active");
     const currentCat = activeTab ? activeTab.dataset.categoria : "todos";
     await loadCatalog(currentCat);
+  });
+}
+
+// ===== Gestão de clientes (admin) =====
+async function loadAdminClientes() {
+  if (!adminClientesList) return; // só existe em cliente.html
+
+  adminClientesList.innerHTML = "<p class='hint'>Carregando clientes...</p>";
+
+  const { data, error } = await supabase
+    .from("clientes")
+    .select(
+      "id, nome, email, telefone, documento, data_evento, endereco_evento"
+    )
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Erro ao carregar clientes:", error);
+    adminClientesList.innerHTML =
+      "<p class='status error'>Erro ao carregar clientes: " +
+      error.message +
+      "</p>";
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    adminClientesList.innerHTML =
+      "<p class='hint'>Nenhum cliente cadastrado ainda.</p>";
+    return;
+  }
+
+  adminClientesList.innerHTML = "";
+  data.forEach((cli) => {
+    const card = document.createElement("div");
+    card.className = "cliente-card";
+
+    card.innerHTML = `
+      <div class="cliente-card-main">
+        <strong>${cli.nome || "Sem nome"}</strong>
+        <span>${cli.email || ""}</span>
+        <span>${cli.telefone || ""}</span>
+      </div>
+      <button class="btn-secondary btn-small">Gerenciar</button>
+    `;
+
+    const btn = card.querySelector("button");
+    btn.addEventListener("click", () => {
+      abrirDetalheCliente(cli);
+    });
+
+    adminClientesList.appendChild(card);
+  });
+}
+
+async function abrirDetalheCliente(cli) {
+  clienteSelecionado = cli;
+  orcamentoAtual = null;
+
+  if (!adminClienteDetalhe) return;
+
+  adminClienteDetalhe.classList.remove("hidden");
+
+  if (clienteNomeTitulo) {
+    clienteNomeTitulo.textContent = cli.nome || "Cliente sem nome";
+  }
+
+  if (clienteInfoBasica) {
+    const linhas = [];
+    if (cli.email) linhas.push("E-mail: " + cli.email);
+    if (cli.telefone) linhas.push("Telefone: " + cli.telefone);
+    if (cli.data_evento) linhas.push("Data do evento: " + cli.data_evento);
+    if (cli.endereco_evento) linhas.push("Local: " + cli.endereco_evento);
+
+    clienteInfoBasica.textContent = linhas.join(" • ");
+  }
+
+  if (formaPagamentoInput) formaPagamentoInput.value = "";
+  if (documentosStatus) {
+    documentosStatus.textContent = "";
+    documentosStatus.className = "status";
+  }
+
+  // busca o orçamento mais recente dessa cliente
+  await loadOrcamentoCliente(cli.id);
+}
+
+async function loadOrcamentoCliente(clienteId) {
+  if (!formaPagamentoInput) return;
+
+  const { data, error } = await supabase
+    .from("orcamentos")
+    .select(
+      "id, valor_total, forma_pagamento, contrato_pdf_url, orcamento_pdf_url"
+    )
+    .eq("cliente_id", clienteId)
+    .order("criado_em", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error && error.code !== "PGRST116") {
+    // PGRST116 = nenhum registro
+    console.error("Erro ao carregar orçamento:", error);
+  }
+
+  orcamentoAtual = data || null;
+
+  if (orcamentoAtual && formaPagamentoInput) {
+    formaPagamentoInput.value = orcamentoAtual.forma_pagamento || "";
+  }
+}
+
+// formulário de documentos (contrato, orçamento, forma de pagamento)
+if (formDocumentos) {
+  formDocumentos.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!clienteSelecionado || !documentosStatus) return;
+
+    documentosStatus.textContent = "Salvando documentos...";
+    documentosStatus.className = "status";
+
+    // garante que existe um orçamento principal
+    let orc = orcamentoAtual;
+    if (!orc) {
+      const { data, error } = await supabase
+        .from("orcamentos")
+        .insert({
+          cliente_id: clienteSelecionado.id,
+          valor_total: null,
+          forma_pagamento: formaPagamentoInput.value || null,
+          status: "aprovado",
+        })
+        .select("id, forma_pagamento")
+        .single();
+
+      if (error) {
+        console.error("Erro ao criar orçamento:", error);
+        documentosStatus.textContent =
+          "Erro ao criar orçamento: " + error.message;
+        documentosStatus.className = "status error";
+        return;
+      }
+      orc = data;
+      orcamentoAtual = orc;
+    } else {
+      await supabase
+        .from("orcamentos")
+        .update({ forma_pagamento: formaPagamentoInput.value || null })
+        .eq("id", orc.id);
+    }
+
+    const atualizacoes = {};
+
+    // Upload orçamento aprovado
+    if (orcamentoPdfInput && orcamentoPdfInput.files[0]) {
+      const file = orcamentoPdfInput.files[0];
+      const path = `${clienteSelecionado.id}/orcamento-${Date.now()}.pdf`;
+
+      const { error: upErr } = await supabase.storage
+        .from("documentos")
+        .upload(path, file, { upsert: true });
+
+      if (upErr) {
+        console.error("Erro ao enviar orçamento PDF:", upErr);
+      } else {
+        const { data: pub } = supabase.storage
+          .from("documentos")
+          .getPublicUrl(path);
+        atualizacoes.orcamento_pdf_url = pub.publicUrl;
+      }
+    }
+
+    // Upload contrato assinado
+    if (contratoPdfInput && contratoPdfInput.files[0]) {
+      const file = contratoPdfInput.files[0];
+      const path = `${clienteSelecionado.id}/contrato-${Date.now()}.pdf`;
+
+      const { error: upErr } = await supabase.storage
+        .from("documentos")
+        .upload(path, file, { upsert: true });
+
+      if (upErr) {
+        console.error("Erro ao enviar contrato PDF:", upErr);
+      } else {
+        const { data: pub } = supabase.storage
+          .from("documentos")
+          .getPublicUrl(path);
+        atualizacoes.contrato_pdf_url = pub.publicUrl;
+      }
+    }
+
+    atualizacoes.forma_pagamento = formaPagamentoInput.value || null;
+
+    const { error: updErr } = await supabase
+      .from("orcamentos")
+      .update(atualizacoes)
+      .eq("id", orc.id);
+
+    if (updErr) {
+      console.error("Erro ao atualizar orçamento:", updErr);
+      documentosStatus.textContent =
+        "Erro ao salvar dados: " + updErr.message;
+      documentosStatus.className = "status error";
+      return;
+    }
+
+    if (orcamentoPdfInput) orcamentoPdfInput.value = "";
+    if (contratoPdfInput) contratoPdfInput.value = "";
+
+    documentosStatus.textContent = "Dados salvos na conta da cliente.";
+    documentosStatus.className = "status ok";
+  });
+}
+
+// botão de redefinição de senha
+if (btnResetSenha) {
+  btnResetSenha.addEventListener("click", async () => {
+    if (!clienteSelecionado || !clienteSelecionado.email) {
+      alert("Selecione uma cliente que tenha e-mail cadastrado.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        clienteSelecionado.email,
+        {
+          redirectTo: window.location.origin + "/cliente.html",
+        }
+      );
+
+      if (error) {
+        console.error("Erro ao enviar reset de senha:", error);
+        alert("Erro ao enviar e-mail de redefinição de senha.");
+        return;
+      }
+
+      alert(
+        "E-mail de redefinição de senha enviado para " +
+          clienteSelecionado.email
+      );
+    } catch (e) {
+      console.error(e);
+      alert("Erro inesperado ao enviar e-mail de redefinição.");
+    }
   });
 }
 
