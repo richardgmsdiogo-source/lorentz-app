@@ -7,186 +7,238 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header>
-    <div class="brand">
-      <div class="brand-logo">L</div>
-      <div class="brand-text">
-        <span>Lorentz Decorações de Festas e Eventos BH e Região</span>
-        <span>
-          <a href="https://instagram.com/decoracoeslorentz" target="_blank">@decoracoeslorentz</a>
-        </span>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-logo">L</div>
+        <div class="brand-text">
+          <span class="brand-name">Lorentz Decorações de Festas e Eventos BH e Região</span>
+          <span class="brand-sub">
+            <a href="https://instagram.com/decoracoeslorentz" target="_blank">@decoracoeslorentz</a>
+          </span>
+        </div>
       </div>
-    </div>
-    <div class="user-info">
-      <span id="header-session-text">Visitante</span>
-      <span id="header-role" class="badge-role hidden"></span>
-      <button id="btn-logout" class="secondary hidden">Sair</button>
+      <nav class="main-nav">
+        <a href="#hero">Início</a>
+        <a href="#catalogo-card">Catálogo</a>
+        <a href="#auth-card">Área do cliente</a>
+      </nav>
+      <div class="user-info">
+        <span id="header-session-text">Visitante</span>
+        <span id="header-role" class="badge-role hidden"></span>
+        <button id="btn-logout" class="secondary hidden">Sair</button>
+      </div>
     </div>
   </header>
 
+  <!-- Hero no estilo revista / blog -->
+  <section id="hero">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <p class="hero-kicker">DECORAÇÃO DE SONHOS</p>
+      <h1>Casamentos, 15 anos e eventos que contam histórias.</h1>
+      <p class="hero-subtitle">
+        Cenários planejados nos mínimos detalhes, para que cada mesa, flor e luz
+        traduza a personalidade de quem celebra.
+      </p>
+      <div class="hero-actions">
+        <a href="#catalogo-card" class="btn-primary">Ver catálogo de decorações</a>
+        <a href="#auth-card" class="btn-ghost">Área do cliente</a>
+      </div>
+    </div>
+  </section>
+
   <main>
-    <!-- Catálogo público -->
-    <section class="card" id="catalogo-card">
-      <div class="card-header">
-        <div>
-          <h2>Catálogo de decorações</h2>
+    <div class="content-grid">
+      <!-- Catálogo público -->
+      <section class="card" id="catalogo-card">
+        <header class="card-header">
+          <div>
+            <p class="section-kicker">Portfólio</p>
+            <h2>Catálogo de decorações</h2>
+            <p>
+              Explore produções da Lorentz: casamentos clássicos, festas intimistas,
+              aniversários infantis e eventos corporativos.
+            </p>
+          </div>
+        </header>
+
+        <!-- Abas de categorias -->
+        <nav class="catalog-tabs" aria-label="Categorias de decoração">
+          <button class="catalog-tab active" data-categoria="todos">Todas</button>
+          <button class="catalog-tab" data-categoria="Casamento">Casamento</button>
+          <button class="catalog-tab" data-categoria="Aniversário">Aniversário</button>
+          <button class="catalog-tab" data-categoria="15 anos">15 anos</button>
+          <button class="catalog-tab" data-categoria="Infantil">Infantil</button>
+        </nav>
+
+        <div id="catalogo-grid"></div>
+
+        <p class="hint" style="margin-top: 14px">
+          Os cenários exibidos aqui são carregados diretamente da tabela
+          <code>decoracoes</code> no Supabase. As imagens podem ser atualizadas pelo
+          painel do administrador.
+        </p>
+      </section>
+
+      <!-- Login + áreas logadas -->
+      <section class="card card-side" id="auth-card">
+        <!-- LOGIN -->
+        <div id="login-section">
+          <p class="section-kicker">Área exclusiva</p>
+          <h2>Área do cliente e da equipe</h2>
           <p>
-            Explore os cenários da Lorentz Decorações: casamentos, aniversários,
-            15 anos e eventos especiais.
+            Clientes acessam seus eventos, contratos e pagamentos. O administrador
+            usa o mesmo login para cadastrar novas decorações, planos e futuramente
+            pedidos e contratos.
+          </p>
+
+          <form id="login-form" class="stack-form">
+            <div class="form-row">
+              <label for="email">E-mail (login)</label>
+              <input
+                id="email"
+                type="email"
+                required
+                placeholder="seuemail@exemplo.com"
+              />
+            </div>
+            <div class="form-row">
+              <label for="password">Senha</label>
+              <input
+                id="password"
+                type="password"
+                required
+                placeholder="Sua senha"
+              />
+            </div>
+            <button type="submit" class="btn-primary full">Entrar</button>
+            <p class="hint">
+              O e-mail de login será usado futuramente para alertas automáticos
+              de pagamento e envio de contratos.
+            </p>
+            <p id="login-status" class="status"></p>
+          </form>
+        </div>
+
+        <!-- ADMIN -->
+        <div id="admin-section" class="hidden admin-panel">
+          <p class="section-kicker">Administração</p>
+          <h2>Painel do administrador</h2>
+          <p class="hint">
+            Cadastre novas decorações com fotos e planos da Lorentz diretamente no banco de dados.
+          </p>
+
+          <hr />
+          <h3 class="subtitulo">Cadastrar decoração</h3>
+          <p class="hint">
+            Grava na tabela <code>decoracoes</code> e envia a imagem para o Storage
+            (bucket <code>decoracoes</code>).
+          </p>
+
+          <form id="form-decor" class="stack-form">
+            <div class="form-row">
+              <label for="decor-categoria">Categoria</label>
+              <input
+                id="decor-categoria"
+                placeholder="Casamento, Aniversário, 15 anos, Infantil..."
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="decor-titulo">Título</label>
+              <input
+                id="decor-titulo"
+                placeholder="Ex.: Casamento Clássico em Branco e Dourado"
+                required
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="decor-descricao">Descrição</label>
+              <input
+                id="decor-descricao"
+                placeholder="Descrição rápida da decoração"
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="decor-imagem">Imagem da decoração</label>
+              <input id="decor-imagem" type="file" accept="image/*" />
+            </div>
+
+            <button type="submit" class="btn-primary">Salvar decoração</button>
+            <p id="decor-status" class="status"></p>
+          </form>
+
+          <hr />
+          <h3 class="subtitulo">Cadastrar plano</h3>
+          <p class="hint">Grava na tabela <code>planos</code>.</p>
+
+          <form id="form-plano" class="stack-form">
+            <div class="form-row">
+              <label for="plano-nome">Nome do plano</label>
+              <input
+                id="plano-nome"
+                placeholder="Ex.: Plano Ouro Casamento"
+                required
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="plano-descricao">Descrição</label>
+              <input
+                id="plano-descricao"
+                placeholder="Resumo do que está incluso"
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="plano-valor">Valor (R$)</label>
+              <input
+                id="plano-valor"
+                type="number"
+                step="0.01"
+                placeholder="1500.00"
+              />
+            </div>
+
+            <button type="submit" class="btn-primary">Salvar plano</button>
+            <p id="plano-status" class="status"></p>
+          </form>
+
+          <hr />
+          <p class="hint">
+            Próxima etapa: cadastro de clientes, contratos, formas de pagamento,
+            alertas automáticos por e-mail e integrações com WhatsApp.
           </p>
         </div>
-      </div>
 
-      <!-- Abas de categorias -->
-      <nav class="catalog-tabs" aria-label="Categorias de decoração">
-        <button class="catalog-tab active" data-categoria="todos">Todas</button>
-        <button class="catalog-tab" data-categoria="Casamento">Casamento</button>
-        <button class="catalog-tab" data-categoria="Aniversário">Aniversário</button>
-        <button class="catalog-tab" data-categoria="15 anos">15 anos</button>
-        <button class="catalog-tab" data-categoria="Infantil">Infantil</button>
-      </nav>
-
-      <div id="catalogo-grid"></div>
-
-      <p class="hint" style="margin-top: 10px">
-        Os dados são carregados da tabela <code>decoracoes</code> no Supabase.
-        As abas funcionam para visitantes e clientes logados.
-      </p>
-    </section>
-
-    <!-- Login + áreas logadas -->
-    <section class="card" id="auth-card">
-      <!-- LOGIN -->
-      <div id="login-section">
-        <h2>Área do cliente</h2>
-        <p>
-          Sem cadastro, você navega pelo catálogo normalmente. Com login,
-          é possível ver sua área exclusiva, e o administrador acessa o painel de gestão.
-        </p>
-
-        <form id="login-form">
-          <div>
-            <label for="email">E-mail (login)</label>
-            <input
-              id="email"
-              type="email"
-              required
-              placeholder="seuemail@exemplo.com"
-            />
-          </div>
-          <div>
-            <label for="password">Senha</label>
-            <input
-              id="password"
-              type="password"
-              required
-              placeholder="Sua senha"
-            />
-          </div>
-          <button type="submit">Entrar</button>
+        <!-- CLIENTE -->
+        <div id="client-section" class="hidden client-panel">
+          <p class="section-kicker">Minha festa</p>
+          <h2>Meus eventos e pagamentos</h2>
           <p class="hint">
-            O e-mail será usado futuramente para avisos automáticos de pagamento.
+            Aqui o cliente verá seus eventos contratados, contratos em PDF,
+            pagamentos realizados e a vencer. Esta área está preparada para
+            ser ligada às tabelas de contratos e pagamentos.
           </p>
-          <p id="login-status" class="status"></p>
-        </form>
-      </div>
-
-      <!-- ADMIN -->
-      <div id="admin-section" class="hidden">
-        <h2>Painel do administrador</h2>
-        <p class="hint">
-          Cadastre decorações com imagens e planos de serviço diretamente no banco.
-        </p>
-
-        <hr />
-        <h3 class="subtitulo">Cadastrar decoração</h3>
-        <p class="hint">
-          Grava na tabela <code>decoracoes</code> e envia a imagem para o Storage
-          (bucket <code>decoracoes</code>).
-        </p>
-
-        <form id="form-decor">
-          <label for="decor-categoria">Categoria</label>
-          <input
-            id="decor-categoria"
-            placeholder="Casamento, Aniversário, 15 anos, Infantil..."
-          />
-
-          <label for="decor-titulo" class="mt">Título</label>
-          <input
-            id="decor-titulo"
-            placeholder="Ex.: Casamento Clássico em Branco e Dourado"
-            required
-          />
-
-          <label for="decor-descricao" class="mt">Descrição</label>
-          <input
-            id="decor-descricao"
-            placeholder="Descrição rápida da decoração"
-          />
-
-          <label for="decor-imagem" class="mt">Imagem da decoração</label>
-          <input id="decor-imagem" type="file" accept="image/*" />
-
-          <button type="submit" class="mt">Salvar decoração</button>
-          <p id="decor-status" class="status"></p>
-        </form>
-
-        <hr />
-        <h3 class="subtitulo">Cadastrar plano</h3>
-        <p class="hint">Grava na tabela <code>planos</code>.</p>
-
-        <form id="form-plano">
-          <label for="plano-nome">Nome do plano</label>
-          <input
-            id="plano-nome"
-            placeholder="Ex.: Plano Ouro Casamento"
-            required
-          />
-
-          <label for="plano-descricao" class="mt">Descrição</label>
-          <input
-            id="plano-descricao"
-            placeholder="Resumo do que está incluso"
-          />
-
-          <label for="plano-valor" class="mt">Valor (R$)</label>
-          <input
-            id="plano-valor"
-            type="number"
-            step="0.01"
-            placeholder="1500.00"
-          />
-
-          <button type="submit" class="mt">Salvar plano</button>
-          <p id="plano-status" class="status"></p>
-        </form>
-
-        <hr />
-        <p class="hint">
-          Próxima etapa: cadastro de clientes, contratos, pagamentos e alertas automáticos.
-        </p>
-      </div>
-
-      <!-- CLIENTE -->
-      <div id="client-section" class="hidden">
-        <h2>Meus eventos e pagamentos</h2>
-        <p class="hint">
-          Aqui o cliente verá seus eventos, contratos em PDF e pagamentos (pagos e a vencer).
-          Esta área é um esqueleto pronto para ligar nas tabelas de contratos.
-        </p>
-      </div>
-    </section>
+        </div>
+      </section>
+    </div>
   </main>
 
-  <div class="footer">
-    Lorentz Decorações de Festas e Eventos BH e Região • Instagram:
-    <a href="https://instagram.com/decoracoeslorentz" target="_blank">@decoracoeslorentz</a>
-    <br />
-    Criado por <a href="https://instagram.com/richard.gms" target="_blank">@richard.gms</a> •
-    WhatsApp:
-    <a href="https://wa.me/5531986841995" target="_blank">31 98684-1995</a>
-  </div>
+  <footer class="footer">
+    <p>
+      Lorentz Decorações de Festas e Eventos BH e Região • Instagram:
+      <a href="https://instagram.com/decoracoeslorentz" target="_blank">@decoracoeslorentz</a>
+    </p>
+    <p>
+      Criado por <a href="https://instagram.com/richard.gms" target="_blank">@richard.gms</a> •
+      WhatsApp:
+      <a href="https://wa.me/5531986841995" target="_blank">31 98684-1995</a>
+    </p>
+  </footer>
 
   <script type="module" src="app.js"></script>
 </body>
