@@ -92,8 +92,8 @@ async function loadCatalog(categoria = "todos") {
     const div = document.createElement("div");
     div.className = "decor-card";
     div.innerHTML =
-      '<div class="decor-title">Nenhuma decoração encontrada</div>' +
-      '<div class="decor-desc">Altere a categoria ou cadastre novas produções no painel do administrador.</div>';
+      '<div class="decor-title">Nenhuma decoração cadastrada</div>' +
+      '<div class="decor-desc">Use o painel do administrador para cadastrar seus primeiros cenários.</div>';
     catalogoGrid.appendChild(div);
     return;
   }
@@ -214,7 +214,7 @@ formDecor.addEventListener("submit", async (e) => {
       const filePath = `decoracoes/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("decoracoes") // bucket
+        .from("decoracoes")
         .upload(filePath, file);
 
       if (uploadError) {
