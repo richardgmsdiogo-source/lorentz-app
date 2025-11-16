@@ -588,6 +588,7 @@ if (formDocumentos) {
         .from("orcamentos")
         .insert({
           cliente_id: clienteSelecionado.id,
+          email: clienteSelecionado.email || null,   // 👈 amarra o orçamento ao e-mail da cliente
           valor_total: null,
           forma_pagamento: formaPagamentoInput.value || null,
           status: "aprovado",
@@ -708,6 +709,7 @@ if (btnResetSenha) {
 }
 
 // ===== Área do cliente: carregar orçamentos / contratos para o usuário logado =====
+// ===== Área do cliente: carregar orçamentos / contratos para o usuário logado =====
 async function loadClientOrcamentosForUser(user) {
   if (!clientOrcamentosList) return; // não está na página cliente.html
 
@@ -721,34 +723,13 @@ async function loadClientOrcamentosForUser(user) {
     return;
   }
 
-  const { data: clientes, error: cliErr } = await supabase
-    .from("clientes")
-    .select("id, nome, data_evento, endereco_evento")
-    .eq("email", email)
-    .order("created_at", { ascending: false })
-    .limit(1);
-
-  if (cliErr) {
-    console.error("Erro ao carregar cliente na área do cliente:", cliErr);
-    clientOrcamentosList.innerHTML =
-      "<p class='status error'>Erro ao carregar seus dados. Tente novamente mais tarde.</p>";
-    return;
-  }
-
-  if (!clientes || !clientes.length) {
-    clientOrcamentosList.innerHTML =
-      "<p class='hint'>Não encontramos nenhum evento vinculado a este e-mail. Confirme com a equipe se seu cadastro já foi criado.</p>";
-    return;
-  }
-
-  const cliente = clientes[0];
-
+  // 1) Busca orçamentos diretamente pelo e-mail do usuário
   const { data: orcs, error: orcErr } = await supabase
     .from("orcamentos")
     .select(
-      "id, valor_total, forma_pagamento, contrato_pdf_url, orcamento_pdf_url, status"
+      "id, valor_total, forma_pagamento, contrato_pdf_url, orcamento_pdf_url, status, cliente_id"
     )
-    .eq("cliente_id", cliente.id)
+    .eq("email", email)
     .order("id", { ascending: false });
 
   if (orcErr) {
@@ -760,26 +741,46 @@ async function loadClientOrcamentosForUser(user) {
 
   if (!orcs || !orcs.length) {
     clientOrcamentosList.innerHTML =
-      "<p class='hint'>Seu cadastro foi encontrado, mas o orçamento ainda não foi anexado. Assim que o orçamento for aprovado, ele aparecerá aqui com o contrato.</p>";
+      "<p class='hint'>Ainda não encontramos nenhum orçamento vinculado a este e-mail. Assim que a equipe Lorentz anexar o orçamento/contrato, eles aparecerão aqui.</p>";
     return;
   }
 
-  clientOrcamentosList.innerHTML = "";
+  // 2) (Opcional) Tenta buscar dados do cliente pelo cliente_id do primeiro orçamento
+  let cliente = null;
+  const primeiro = orcs[0];
 
-  const dataEventoTexto = cliente.data_evento
+  if (primeiro.cliente_id) {
+    const { data: clientes, error: cliErr } = await supabase
+      .from("clientes")
+      .select("id, nome, data_evento, endereco_evento")
+      .eq("id", primeiro.cliente_id)
+      .limit(1);
+
+    if (cliErr) {
+      console.error("Erro ao carregar cliente na área do cliente:", cliErr);
+    } else if (clientes && clientes.length) {
+      cliente = clientes[0];
+    }
+  }
+
+  const nomeCliente = cliente?.nome || email;
+  const dataEventoTexto = cliente?.data_evento
     ? new Date(cliente.data_evento).toLocaleDateString("pt-BR")
     : "data a definir";
 
+  clientOrcamentosList.innerHTML = "";
+
+  // monta um card para cada orçamento encontrado
   orcs.forEach((orc) => {
     const wrapper = document.createElement("article");
     wrapper.className = "decor-card";
 
     wrapper.innerHTML = `
       <div class="decor-tag">Orçamento #${orc.id}</div>
-      <div class="decor-title">${cliente.nome}</div>
+      <div class="decor-title">${nomeCliente}</div>
       <p class="hint">
         Evento em: ${dataEventoTexto}
-        ${cliente.endereco_evento ? " • Local: " + cliente.endereco_evento : ""}
+        ${cliente?.endereco_evento ? " • Local: " + cliente.endereco_evento : ""}
       </p>
       <p class="hint">
         Status: <strong>${orc.status || "aprovado"}</strong>
@@ -806,7 +807,6 @@ async function loadClientOrcamentosForUser(user) {
     clientOrcamentosList.appendChild(wrapper);
   });
 }
-
 // ===== Inicialização =====
 (async () => {
   const { data } = await supabase.auth.getSession();
