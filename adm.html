@@ -142,17 +142,53 @@
                 <label for="orcamento-pdf">Orçamento aprovado (PDF)</label>
                 <input id="orcamento-pdf" type="file" accept="application/pdf" />
               </div>
+
               <div class="form-row">
                 <label for="contrato-pdf">Contrato assinado (PDF)</label>
                 <input id="contrato-pdf" type="file" accept="application/pdf" />
               </div>
+
+              <!-- NOVO BLOCO: FORMA DE PAGAMENTO E DATA COM CALENDÁRIO -->
               <div class="form-row">
-                <label for="forma-pagamento">Forma de pagamento</label>
-                <input
-                  id="forma-pagamento"
-                  placeholder="Pix à vista, boleto 3x, etc."
-                />
+                <label>Forma de pagamento</label>
+
+                <div class="form-row">
+                  <label for="forma-qtd">Quantidade de parcelas</label>
+                  <select id="forma-qtd">
+                    <option value="1">1x</option>
+                    <option value="2">2x</option>
+                    <option value="3">3x</option>
+                    <option value="4">4x</option>
+                    <option value="5">5x</option>
+                    <option value="6">6x</option>
+                    <option value="7">7x</option>
+                    <option value="8">8x</option>
+                    <option value="9">9x</option>
+                    <option value="10">10x</option>
+                  </select>
+                </div>
+
+                <div class="form-row">
+                  <label for="forma-tipo">Meio de pagamento</label>
+                  <select id="forma-tipo">
+                    <option value="">Selecione...</option>
+                    <option value="Pix">Pix</option>
+                    <option value="Boleto">Boleto</option>
+                    <option value="Cartão">Cartão</option>
+                  </select>
+                </div>
+
+                <div class="form-row">
+                  <label for="forma-data">Data do pagamento (ou 1ª parcela)</label>
+                  <!-- mini calendário padrão HTML5 -->
+                  <input type="date" id="forma-data" />
+                </div>
+
+                <p id="forma-preview" class="hint">
+                  Selecione parcelas, forma de pagamento e data.
+                </p>
               </div>
+
               <button type="submit" class="btn-primary">
                 Salvar na conta da cliente
               </button>
