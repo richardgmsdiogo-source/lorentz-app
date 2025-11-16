@@ -334,6 +334,7 @@ if (btnLogout) {
 
 // ===== Cadastro de decoração (admin) =====
 // Aqui é onde TODAS as fotos sobem para o Storage E para a tabela decoracao_imagens
+// ===== Cadastro de decoração (admin) =====
 if (formDecor) {
   formDecor.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -369,13 +370,16 @@ if (formDecor) {
 
     if (decoError) {
       console.error("Erro ao inserir decoração:", decoError);
-      decorStatus.textContent = "Erro ao salvar decoração: " + decoError.message;
+      decorStatus.textContent =
+        "Erro ao salvar decoração: " + decoError.message;
       decorStatus.className = "status error";
       return;
     }
 
     const decoracaoId = decoData.id;
     let capaUrl = null;
+    let imagensSalvas = 0;
+    let errosImagens = 0;
 
     // 2) Faz upload de TODAS as imagens e salva na tabela decoracao_imagens
     if (files && files.length > 0) {
@@ -393,6 +397,7 @@ if (formDecor) {
 
         if (uploadError) {
           console.error("Erro ao enviar imagem:", uploadError);
+          errosImagens++;
           continue;
         }
 
@@ -414,10 +419,15 @@ if (formDecor) {
             titulo,
             url: publicUrl,
             ordem: i, // ordem igual à seleção
-          });
+          })
+          .select("id")
+          .single();
 
         if (imgError) {
           console.error("Erro ao salvar imagem no banco:", imgError);
+          errosImagens++;
+        } else {
+          imagensSalvas++;
         }
       }
     }
@@ -430,8 +440,24 @@ if (formDecor) {
         .eq("id", decoracaoId);
     }
 
-    decorStatus.textContent = "Decoração cadastrada com sucesso!";
-    decorStatus.className = "status ok";
+    // 4) Mensagem final mais informativa
+    if (errosImagens > 0 && imagensSalvas === 0) {
+      decorStatus.textContent =
+        "Decoração criada, mas houve erro ao salvar todas as imagens. Veja o console para detalhes.";
+      decorStatus.className = "status error";
+    } else if (errosImagens > 0 && imagensSalvas > 0) {
+      decorStatus.textContent =
+        `Decoração criada. ${imagensSalvas} imagem(ns) salva(s), ${errosImagens} com erro. Veja o console.`;
+      decorStatus.className = "status";
+    } else if (imagensSalvas > 0) {
+      decorStatus.textContent = "Decoração cadastrada com sucesso!";
+      decorStatus.className = "status ok";
+    } else {
+      decorStatus.textContent =
+        "Decoração cadastrada sem imagens. Você selecionou arquivos?";
+      decorStatus.className = "status";
+    }
+
     formDecor.reset();
 
     // Se estiver na página do catálogo, recarrega lista
@@ -440,7 +466,6 @@ if (formDecor) {
     await loadCatalog(currentCat);
   });
 }
-
 // ===== Gestão de clientes (admin) =====
 async function loadAdminClientes() {
   if (!adminClientesList) return; // só existe em cliente.html/adm.html
