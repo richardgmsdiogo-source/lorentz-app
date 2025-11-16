@@ -48,15 +48,15 @@
 
   <main>
     <div class="content-grid">
-      <!-- CARD PRINCIPAL (LOGIN / ADM / CLIENTE) -->
+      <!-- CARD PRINCIPAL (LOGIN / CLIENTE) -->
       <section class="card" id="auth-card">
-        <!-- LOGIN (CLIENTE OU ADM) -->
+        <!-- LOGIN (CLIENTE) -->
         <div id="login-section">
           <p class="section-kicker">Acesso</p>
           <h2>Faça login no seu painel</h2>
           <p>
             Use o e-mail e a senha cadastrados pela equipe Lorentz para acessar
-            sua área do cliente ou o Portal ADM.
+            sua área do cliente.
           </p>
 
           <form id="login-form" class="stack-form">
@@ -77,106 +77,6 @@
           </form>
         </div>
 
-        <!-- PORTAL ADM (quando o perfil no Supabase tiver role = 'admin') -->
-        <div id="admin-section" class="hidden admin-panel">
-          <p class="section-kicker">Administração</p>
-          <h2>Painel do administrador</h2>
-          <p class="hint">
-            Aqui você gerencia o portfólio (decorações) e as contas das clientes:
-            orçamentos aprovados, contratos em PDF, forma de pagamento e redefinição de senha.
-          </p>
-
-          <!-- BLOCO: CADASTRAR DECORAÇÃO -->
-          <hr />
-          <h3 class="subtitulo">Cadastrar decoração</h3>
-          <p class="hint">
-            Grava na tabela <code>decoracoes</code> e envia as imagens para o Storage
-            (bucket <code>decoracoes</code>). A primeira foto vira a capa do catálogo
-            e as demais aparecem no carrossel.
-          </p>
-
-          <form id="form-decor" class="stack-form">
-            <div class="form-row">
-              <label for="decor-categoria">Categoria</label>
-              <input
-                id="decor-categoria"
-                placeholder="Casamento, Aniversário, 15 anos, Infantil..."
-              />
-            </div>
-            <div class="form-row">
-              <label for="decor-titulo">Título</label>
-              <input
-                id="decor-titulo"
-                placeholder="Ex.: Casamento Clássico em Branco e Dourado"
-                required
-              />
-            </div>
-            <div class="form-row">
-              <label for="decor-descricao">Descrição</label>
-              <input
-                id="decor-descricao"
-                placeholder="Descrição rápida da decoração"
-              />
-            </div>
-            <div class="form-row">
-              <label for="decor-imagem">Imagens da decoração</label>
-              <input id="decor-imagem" type="file" accept="image/*" multiple />
-              <span class="hint">
-                Você pode selecionar várias fotos. A primeira será usada como capa;
-                todas aparecem no carrossel ao abrir o cenário.
-              </span>
-            </div>
-            <button type="submit" class="btn-primary">Salvar decoração</button>
-            <p id="decor-status" class="status"></p>
-          </form>
-
-          <!-- BLOCO: GESTÃO DE CLIENTES -->
-          <hr />
-          <h3 class="subtitulo">Gestão de clientes</h3>
-          <p class="hint">
-            Selecione uma cliente para anexar contrato assinado, orçamento aprovado em PDF,
-            ajustar a forma de pagamento e enviar link de redefinição de senha.
-          </p>
-
-          <div id="admin-clientes-list" class="clientes-list">
-            <!-- preenchido via JavaScript -->
-          </div>
-
-          <div id="admin-cliente-detalhe" class="cliente-detalhe hidden">
-            <h4 id="cliente-nome-titulo"></h4>
-            <p class="hint" id="cliente-info-basica"></p>
-
-            <form id="form-documentos" class="stack-form">
-              <div class="form-row">
-                <label for="orcamento-pdf">Orçamento aprovado (PDF)</label>
-                <input id="orcamento-pdf" type="file" accept="application/pdf" />
-              </div>
-              <div class="form-row">
-                <label for="contrato-pdf">Contrato assinado (PDF)</label>
-                <input id="contrato-pdf" type="file" accept="application/pdf" />
-              </div>
-              <div class="form-row">
-                <label for="forma-pagamento">Forma de pagamento</label>
-                <input
-                  id="forma-pagamento"
-                  placeholder="Pix à vista, boleto 3x, etc."
-                />
-              </div>
-              <button type="submit" class="btn-primary">
-                Salvar na conta da cliente
-              </button>
-              <p id="documentos-status" class="status"></p>
-            </form>
-
-            <button id="btn-reset-senha" class="btn-secondary" type="button">
-              Enviar link de redefinição de senha por e-mail
-            </button>
-            <p class="hint">
-              A cliente receberá um e-mail do sistema para escolher uma nova senha de acesso.
-            </p>
-          </div>
-        </div>
-
         <!-- ÁREA DO CLIENTE (PAINEL) -->
         <div id="client-section" class="hidden client-panel">
           <p class="section-kicker">Meu painel</p>
@@ -186,7 +86,7 @@
             eles aparecerão abaixo em formato de cartão, com links para abrir os PDFs.
           </p>
 
-          <!-- Aqui o JavaScript irá injetar o cartão do orçamento / contrato baseado na tabela "orcamentos" -->
+          <!-- Preenchido via app.js com base na tabela "orcamentos" -->
           <div id="client-orcamentos" class="orcamentos-list">
             <p class="hint">Carregando informações do seu evento...</p>
           </div>
@@ -195,20 +95,20 @@
 
           <h3 class="subtitulo">Pagamentos e status</h3>
           <p class="hint">
-            No próximo passo do projeto, esta área poderá mostrar boletos, vencimentos
-            e comprovantes, de forma semelhante a um extrato: parcelas pagas, pendentes
-            e vencidas, sempre sincronizadas com o painel da Lorentz.
+            A forma de pagamento combinada com a equipe aparece junto do seu orçamento.
+            Em versões futuras, esta área poderá mostrar vencimentos, parcelas pagas
+            e comprovantes, como um extrato financeiro simplificado do seu evento.
           </p>
         </div>
       </section>
 
-      <!-- CARD LATERAL DE EXPLICAÇÃO (INSPIRADO NO DASHBOARD DO LOVABLE) -->
+      <!-- CARD LATERAL DE EXPLICAÇÃO -->
       <section class="card card-side">
         <p class="section-kicker">Como funciona</p>
         <h2>Passo a passo do seu evento</h2>
         <p class="hint">
-          A ideia aqui é ser o “resumo executivo” do seu painel, no estilo do dashboard
-          que o Lovable criou, mas adaptado ao fluxo real da Lorentz.
+          Este painel mostra o que já foi alinhado com a Lorentz e deixa você sempre
+          na mesma página que a equipe.
         </p>
 
         <ul style="margin-top: 10px; font-size: 0.85rem; color: var(--muted); padding-left: 18px;">
@@ -216,12 +116,12 @@
           <li><strong>2. Cadastro:</strong> a equipe registra seus dados na tabela <code>clientes</code> (data, local, contato).</li>
           <li><strong>3. Orçamento aprovado:</strong> é criado um registro em <code>orcamentos</code> com forma de pagamento e links de PDF.</li>
           <li><strong>4. Área do cliente:</strong> ao fazer login, você vê aqui o orçamento aprovado e o contrato em PDF.</li>
-          <li><strong>5. Pagamentos:</strong> futuramente, esta mesma área mostrará as parcelas, status e comprovantes.</li>
+          <li><strong>5. Pagamentos:</strong> você acompanha a forma de pagamento combinada e, futuramente, o status das parcelas.</li>
         </ul>
 
         <p class="hint" style="margin-top: 10px;">
           Tudo isso fica sincronizado com o painel ADM usado internamente pela Lorentz,
-          mantendo o cliente e a equipe sempre na mesma página.
+          mantendo o cliente e a equipe sempre alinhados até o dia da festa.
         </p>
       </section>
     </div>
