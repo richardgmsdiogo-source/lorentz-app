@@ -55,7 +55,7 @@ const btnResetSenha = document.getElementById("btn-reset-senha");
 let clienteSelecionado = null;
 let orcamentoAtual = null;
 
-// ===== UI de sessão (guardando nulls) =====
+// ===== UI de sessão =====
 function setLoggedOutUI() {
   if (loginSection) loginSection.classList.remove("hidden");
   if (adminSection) adminSection.classList.add("hidden");
@@ -114,11 +114,9 @@ async function handleSession(user) {
 
   if (profile?.role === "admin") {
     setAdminUI(name);
-    // se estiver em uma página com gestão de clientes, carrega
     await loadAdminClientes();
   } else {
     setClientUI(name);
-    // se estiver na página cliente.html, carrega os orçamentos/contratos dessa pessoa
     await loadClientOrcamentosForUser(user);
   }
 }
@@ -129,9 +127,11 @@ async function loadCatalog(categoria = "todos") {
 
   let query = supabase
     .from("decoracoes")
-    .select("id, categoria, titulo, descricao, imagem_url, ativo")
+    .select(
+      "id, categoria, titulo, descricao, capa_url, imagem_url, ativo"
+    )
     .eq("ativo", true)
-    .order("id", { ascending: false });
+    .order("criado_em", { ascending: false });
 
   if (categoria && categoria !== "todos") {
     query = query.eq("categoria", categoria);
@@ -162,10 +162,12 @@ async function loadCatalog(categoria = "todos") {
   }
 
   for (const deco of data) {
+    const capa = deco.capa_url || deco.imagem_url;
+
     const card = document.createElement("article");
     card.className = "decor-card";
     card.innerHTML = `
-      ${deco.imagem_url ? `<img class="decor-img" src="${deco.imagem_url}" alt="${deco.titulo}" />` : ""}
+      ${capa ? `<img class="decor-img" src="${capa}" alt="${deco.titulo}" />` : ""}
       <div class="decor-tag">${deco.categoria || "Evento"}</div>
       <div class="decor-title">${deco.titulo}</div>
       <div class="decor-desc">${deco.descricao || ""}</div>
@@ -190,36 +192,38 @@ if (catalogTabs && catalogTabs.length) {
   });
 }
 
-// ===== Modal / carrossel =====
-async function fetchDecorationImages(decoracaoId, fallbackUrl) {
-  const paths = [];
-  const folder = `${decoracaoId}/`; // garante barra no final
+// ===== Imagens da decoração (carrossel) por TÍTULO =====
+// Busca na tabela decoracao_imagens todas as imagens com o mesmo título, na ordem.
+async function fetchDecorationImagesByTitulo(titulo, fallbackUrl) {
+  const urls = [];
 
   try {
-    const { data, error } = await supabase.storage
-      .from("decoracoes")
-      .list(folder, { limit: 50 });
+    const { data, error } = await supabase
+      .from("decoracao_imagens")
+      .select("url, ordem")
+      .eq("titulo", titulo)
+      .order("ordem", { ascending: true });
 
     if (error) {
-      console.error("Erro ao listar imagens:", error);
+      console.error("Erro ao buscar imagens por título:", error);
     } else if (data && data.length > 0) {
-      for (const obj of data) {
-        const { data: publicData } = supabase.storage
-          .from("decoracoes")
-          .getPublicUrl(folder + obj.name);
-        paths.push(publicData.publicUrl);
-      }
+      data.forEach((row) => urls.push(row.url));
     }
   } catch (e) {
     console.error("Erro geral ao buscar imagens:", e);
   }
 
-  if (paths.length === 0 && fallbackUrl) paths.push(fallbackUrl);
-  return paths;
+  if (urls.length === 0 && fallbackUrl) {
+    urls.push(fallbackUrl);
+  }
+
+  return urls;
 }
 
 async function openDecorModal(deco) {
   if (!decorModal || !decorModalContent) return;
+
+  const capa = deco.capa_url || deco.imagem_url;
 
   decorModalContent.innerHTML = `
     <p class="section-kicker">${deco.categoria || "Evento"}</p>
@@ -239,7 +243,8 @@ async function openDecorModal(deco) {
   const imgEl = document.getElementById("carousel-image");
   const arrows = decorModalContent.querySelectorAll(".carousel-arrow");
 
-  const imagens = await fetchDecorationImages(deco.id, deco.imagem_url);
+  // Agora o carrossel usa o TÍTULO para agrupar as imagens
+  const imagens = await fetchDecorationImagesByTitulo(deco.titulo, capa);
   let index = 0;
 
   function render() {
@@ -328,6 +333,7 @@ if (btnLogout) {
 }
 
 // ===== Cadastro de decoração (admin) =====
+// Aqui é onde TODAS as fotos sobem para o Storage E para a tabela decoracao_imagens
 if (formDecor) {
   formDecor.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -349,6 +355,7 @@ if (formDecor) {
 
     decorStatus.textContent = "Salvando decoração...";
 
+    // 1) Cria a decoração principal
     const { data: decoData, error: decoError } = await supabase
       .from("decoracoes")
       .insert({
@@ -370,6 +377,7 @@ if (formDecor) {
     const decoracaoId = decoData.id;
     let capaUrl = null;
 
+    // 2) Faz upload de TODAS as imagens e salva na tabela decoracao_imagens
     if (files && files.length > 0) {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -388,19 +396,37 @@ if (formDecor) {
           continue;
         }
 
+        const { data: publicData } = supabase.storage
+          .from("decoracoes")
+          .getPublicUrl(path);
+        const publicUrl = publicData.publicUrl;
+
+        // Primeira imagem vira capa
         if (!capaUrl) {
-          const { data: publicData } = supabase.storage
-            .from("decoracoes")
-            .getPublicUrl(path);
-          capaUrl = publicData.publicUrl;
+          capaUrl = publicUrl;
+        }
+
+        // Insere o registro da imagem no banco, com título e ordem
+        const { error: imgError } = await supabase
+          .from("decoracao_imagens")
+          .insert({
+            decoracao_id: decoracaoId,
+            titulo,
+            url: publicUrl,
+            ordem: i, // ordem igual à seleção
+          });
+
+        if (imgError) {
+          console.error("Erro ao salvar imagem no banco:", imgError);
         }
       }
     }
 
+    // 3) Atualiza a capa na tabela decoracoes
     if (capaUrl) {
       await supabase
         .from("decoracoes")
-        .update({ imagem_url: capaUrl })
+        .update({ imagem_url: capaUrl, capa_url: capaUrl })
         .eq("id", decoracaoId);
     }
 
@@ -494,7 +520,6 @@ async function abrirDetalheCliente(cli) {
     documentosStatus.className = "status";
   }
 
-  // busca o orçamento mais recente dessa cliente
   await loadOrcamentoCliente(cli.id);
 }
 
@@ -512,7 +537,6 @@ async function loadOrcamentoCliente(clienteId) {
     .maybeSingle();
 
   if (error && error.code !== "PGRST116") {
-    // PGRST116 = nenhum registro
     console.error("Erro ao carregar orçamento:", error);
   }
 
@@ -672,7 +696,6 @@ async function loadClientOrcamentosForUser(user) {
     return;
   }
 
-  // 1) Descobre o registro de cliente pelo e-mail
   const { data: clientes, error: cliErr } = await supabase
     .from("clientes")
     .select("id, nome, data_evento, endereco_evento")
@@ -695,7 +718,6 @@ async function loadClientOrcamentosForUser(user) {
 
   const cliente = clientes[0];
 
-  // 2) Busca orçamentos vinculados a esse cliente
   const { data: orcs, error: orcErr } = await supabase
     .from("orcamentos")
     .select(
@@ -762,11 +784,9 @@ async function loadClientOrcamentosForUser(user) {
 
 // ===== Inicialização =====
 (async () => {
-  // Recupera sessão atual (se usuário já estiver logado)
   const { data } = await supabase.auth.getSession();
   const user = data?.session?.user ?? null;
   await handleSession(user);
 
-  // Só carrega catálogo se existir na página
   await loadCatalog("todos");
 })();
