@@ -48,9 +48,13 @@ const clienteInfoBasica = document.getElementById("cliente-info-basica");
 const formDocumentos = document.getElementById("form-documentos");
 const orcamentoPdfInput = document.getElementById("orcamento-pdf");
 const contratoPdfInput = document.getElementById("contrato-pdf");
-const formaPagamentoInput = document.getElementById("forma-pagamento");
 const documentosStatus = document.getElementById("documentos-status");
 const btnResetSenha = document.getElementById("btn-reset-senha");
+
+// NOVOS campos para forma de pagamento parcelada
+const formaQtdInput = document.getElementById("forma-qtd");
+const parcelasContainer = document.getElementById("parcelas-container");
+const formaPreview = document.getElementById("forma-preview");
 
 let clienteSelecionado = null;
 let orcamentoAtual = null;
@@ -127,9 +131,7 @@ async function loadCatalog(categoria = "todos") {
 
   let query = supabase
     .from("decoracoes")
-    .select(
-      "id, categoria, titulo, descricao, capa_url, imagem_url, ativo"
-    )
+    .select("id, categoria, titulo, descricao, capa_url, imagem_url, ativo")
     .eq("ativo", true)
     .order("criado_em", { ascending: false });
 
@@ -193,7 +195,6 @@ if (catalogTabs && catalogTabs.length) {
 }
 
 // ===== Imagens da decoração (carrossel) por TÍTULO =====
-// Busca na tabela decoracao_imagens todas as imagens com o mesmo título, na ordem.
 async function fetchDecorationImagesByTitulo(titulo, fallbackUrl) {
   const urls = [];
 
@@ -243,7 +244,6 @@ async function openDecorModal(deco) {
   const imgEl = document.getElementById("carousel-image");
   const arrows = decorModalContent.querySelectorAll(".carousel-arrow");
 
-  // Agora o carrossel usa o TÍTULO para agrupar as imagens
   const imagens = await fetchDecorationImagesByTitulo(deco.titulo, capa);
   let index = 0;
 
@@ -333,8 +333,6 @@ if (btnLogout) {
 }
 
 // ===== Cadastro de decoração (admin) =====
-// Aqui é onde TODAS as fotos sobem para o Storage E para a tabela decoracao_imagens
-// ===== Cadastro de decoração (admin) =====
 if (formDecor) {
   formDecor.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -356,7 +354,6 @@ if (formDecor) {
 
     decorStatus.textContent = "Salvando decoração...";
 
-    // 1) Cria a decoração principal
     const { data: decoData, error: decoError } = await supabase
       .from("decoracoes")
       .insert({
@@ -381,7 +378,6 @@ if (formDecor) {
     let imagensSalvas = 0;
     let errosImagens = 0;
 
-    // 2) Faz upload de TODAS as imagens e salva na tabela decoracao_imagens
     if (files && files.length > 0) {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -406,19 +402,17 @@ if (formDecor) {
           .getPublicUrl(path);
         const publicUrl = publicData.publicUrl;
 
-        // Primeira imagem vira capa
         if (!capaUrl) {
           capaUrl = publicUrl;
         }
 
-        // Insere o registro da imagem no banco, com título e ordem
         const { error: imgError } = await supabase
           .from("decoracao_imagens")
           .insert({
             decoracao_id: decoracaoId,
             titulo,
             url: publicUrl,
-            ordem: i, // ordem igual à seleção
+            ordem: i,
           })
           .select("id")
           .single();
@@ -432,7 +426,6 @@ if (formDecor) {
       }
     }
 
-    // 3) Atualiza a capa na tabela decoracoes
     if (capaUrl) {
       await supabase
         .from("decoracoes")
@@ -440,7 +433,6 @@ if (formDecor) {
         .eq("id", decoracaoId);
     }
 
-    // 4) Mensagem final mais informativa
     if (errosImagens > 0 && imagensSalvas === 0) {
       decorStatus.textContent =
         "Decoração criada, mas houve erro ao salvar todas as imagens. Veja o console para detalhes.";
@@ -460,15 +452,15 @@ if (formDecor) {
 
     formDecor.reset();
 
-    // Se estiver na página do catálogo, recarrega lista
     const activeTab = document.querySelector(".catalog-tab.active");
     const currentCat = activeTab ? activeTab.dataset.categoria : "todos";
     await loadCatalog(currentCat);
   });
 }
+
 // ===== Gestão de clientes (admin) =====
 async function loadAdminClientes() {
-  if (!adminClientesList) return; // só existe em cliente.html/adm.html
+  if (!adminClientesList) return;
 
   adminClientesList.innerHTML = "<p class='hint'>Carregando clientes...</p>";
 
@@ -539,18 +531,24 @@ async function abrirDetalheCliente(cli) {
     clienteInfoBasica.textContent = linhas.join(" • ");
   }
 
-  if (formaPagamentoInput) formaPagamentoInput.value = "";
   if (documentosStatus) {
     documentosStatus.textContent = "";
     documentosStatus.className = "status";
   }
 
+  // reset padrão da forma de pagamento
+  if (formaQtdInput) formaQtdInput.value = "1";
+  if (parcelasContainer) parcelasContainer.innerHTML = "";
+  if (formaPreview) {
+    formaPreview.textContent =
+      "Selecione o número de parcelas; depois defina a forma e a data de cada uma.";
+  }
+
+  buildParcelasUI();
   await loadOrcamentoCliente(cli.id);
 }
 
 async function loadOrcamentoCliente(clienteId) {
-  if (!formaPagamentoInput) return;
-
   const { data, error } = await supabase
     .from("orcamentos")
     .select(
@@ -567,12 +565,100 @@ async function loadOrcamentoCliente(clienteId) {
 
   orcamentoAtual = data || null;
 
-  if (orcamentoAtual && formaPagamentoInput) {
-    formaPagamentoInput.value = orcamentoAtual.forma_pagamento || "";
+  if (orcamentoAtual && formaPreview) {
+    formaPreview.textContent = orcamentoAtual.forma_pagamento
+      ? `Forma atual: ${orcamentoAtual.forma_pagamento}`
+      : "Forma de pagamento ainda não informada.";
   }
 }
 
-// formulário de documentos (contrato, orçamento, forma de pagamento)
+// ===== Forma de pagamento parcelada (1ª Pix, 2ª Cartão, etc.) =====
+function buildParcelasUI() {
+  if (!parcelasContainer || !formaQtdInput) return;
+
+  const qtd = parseInt(formaQtdInput.value || "0", 10);
+  parcelasContainer.innerHTML = "";
+
+  if (!qtd || qtd <= 0) {
+    if (formaPreview) {
+      formaPreview.textContent =
+        "Selecione o número de parcelas; depois escolha a forma e a data de cada uma.";
+    }
+    return;
+  }
+
+  for (let i = 1; i <= qtd; i++) {
+    const row = document.createElement("div");
+    row.className = "form-row parcela-row";
+
+    row.innerHTML = `
+      <label style="font-weight:600; margin-bottom:4px;">Parcela ${i}</label>
+      <div class="form-row">
+        <select class="parcela-tipo">
+          <option value="">Meio de pagamento...</option>
+          <option value="Pix">Pix</option>
+          <option value="Boleto">Boleto</option>
+          <option value="Cartão">Cartão</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <input type="date" class="parcela-data" />
+      </div>
+    `;
+
+    parcelasContainer.appendChild(row);
+  }
+
+  parcelasContainer
+    .querySelectorAll("select, input")
+    .forEach((el) => el.addEventListener("change", updateFormaPreview));
+
+  updateFormaPreview();
+}
+
+function getFormaPagamentoTexto() {
+  if (!formaQtdInput || !parcelasContainer) return "";
+
+  const qtd = parseInt(formaQtdInput.value || "0", 10);
+  if (!qtd || qtd <= 0) return "";
+
+  const rows = parcelasContainer.querySelectorAll(".parcela-row");
+  const partes = [];
+
+  rows.forEach((row, idx) => {
+    const tipoEl = row.querySelector(".parcela-tipo");
+    const dataEl = row.querySelector(".parcela-data");
+
+    const tipo = tipoEl && tipoEl.value;
+    const data = dataEl && dataEl.value;
+
+    if (!tipo || !data) return;
+
+    const [ano, mes, dia] = data.split("-");
+    const dataBr = `${dia}/${mes}/${ano}`;
+    const num = idx + 1;
+
+    partes.push(`${num}ª parcela: ${tipo} - ${dataBr}`);
+  });
+
+  if (partes.length === 0) return "";
+
+  return partes.join(" | ");
+}
+
+function updateFormaPreview() {
+  if (!formaPreview) return;
+  const txt = getFormaPagamentoTexto();
+  formaPreview.textContent = txt
+    ? `Forma de pagamento definida: ${txt}`
+    : "Selecione a forma e a data de cada parcela.";
+}
+
+if (formaQtdInput) {
+  formaQtdInput.addEventListener("change", buildParcelasUI);
+}
+
+// ===== formulário de documentos (contrato, orçamento, forma de pagamento) =====
 if (formDocumentos) {
   formDocumentos.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -581,16 +667,17 @@ if (formDocumentos) {
     documentosStatus.textContent = "Salvando documentos...";
     documentosStatus.className = "status";
 
-    // garante que existe um orçamento principal
+    const formaTexto = getFormaPagamentoTexto();
+
     let orc = orcamentoAtual;
     if (!orc) {
       const { data, error } = await supabase
         .from("orcamentos")
         .insert({
           cliente_id: clienteSelecionado.id,
-          email: clienteSelecionado.email || null,   // 👈 amarra o orçamento ao e-mail da cliente
+          email: clienteSelecionado.email || null,
           valor_total: null,
-          forma_pagamento: formaPagamentoInput.value || null,
+          forma_pagamento: formaTexto || null,
           status: "aprovado",
         })
         .select("id, forma_pagamento")
@@ -608,7 +695,7 @@ if (formDocumentos) {
     } else {
       await supabase
         .from("orcamentos")
-        .update({ forma_pagamento: formaPagamentoInput.value || null })
+        .update({ forma_pagamento: formaTexto || null })
         .eq("id", orc.id);
     }
 
@@ -652,7 +739,7 @@ if (formDocumentos) {
       }
     }
 
-    atualizacoes.forma_pagamento = formaPagamentoInput.value || null;
+    atualizacoes.forma_pagamento = formaTexto || null;
 
     const { error: updErr } = await supabase
       .from("orcamentos")
@@ -709,9 +796,8 @@ if (btnResetSenha) {
 }
 
 // ===== Área do cliente: carregar orçamentos / contratos para o usuário logado =====
-// ===== Área do cliente: carregar orçamentos / contratos para o usuário logado =====
 async function loadClientOrcamentosForUser(user) {
-  if (!clientOrcamentosList) return; // não está na página cliente.html
+  if (!clientOrcamentosList) return;
 
   clientOrcamentosList.innerHTML =
     "<p class='hint'>Carregando informações do seu evento...</p>";
@@ -723,7 +809,6 @@ async function loadClientOrcamentosForUser(user) {
     return;
   }
 
-  // 1) Busca orçamentos diretamente pelo e-mail do usuário
   const { data: orcs, error: orcErr } = await supabase
     .from("orcamentos")
     .select(
@@ -741,11 +826,11 @@ async function loadClientOrcamentosForUser(user) {
 
   if (!orcs || !orcs.length) {
     clientOrcamentosList.innerHTML =
-      "<p class='hint'>Ainda não encontramos nenhum orçamento vinculado a este e-mail. Assim que a equipe Lorentz anexar o orçamento/contrato, eles aparecerão aqui.</p>";
+      "<p class='hint'>Ainda não encontramos nenhum orçamento vinculado a este e-mail. Assim que a equipe Lorentz anexar o orçamento e o contrato, eles aparecerão aqui.</p>";
     return;
   }
 
-  // 2) (Opcional) Tenta buscar dados do cliente pelo cliente_id do primeiro orçamento
+  // tenta buscar dados do cliente com base no primeiro orçamento
   let cliente = null;
   const primeiro = orcs[0];
 
@@ -770,7 +855,6 @@ async function loadClientOrcamentosForUser(user) {
 
   clientOrcamentosList.innerHTML = "";
 
-  // monta um card para cada orçamento encontrado
   orcs.forEach((orc) => {
     const wrapper = document.createElement("article");
     wrapper.className = "decor-card";
@@ -780,7 +864,11 @@ async function loadClientOrcamentosForUser(user) {
       <div class="decor-title">${nomeCliente}</div>
       <p class="hint">
         Evento em: ${dataEventoTexto}
-        ${cliente?.endereco_evento ? " • Local: " + cliente.endereco_evento : ""}
+        ${
+          cliente?.endereco_evento
+            ? " • Local: " + cliente.endereco_evento
+            : ""
+        }
       </p>
       <p class="hint">
         Status: <strong>${orc.status || "aprovado"}</strong>
@@ -807,6 +895,7 @@ async function loadClientOrcamentosForUser(user) {
     clientOrcamentosList.appendChild(wrapper);
   });
 }
+
 // ===== Inicialização =====
 (async () => {
   const { data } = await supabase.auth.getSession();
