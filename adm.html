@@ -148,7 +148,7 @@
                 <input id="contrato-pdf" type="file" accept="application/pdf" />
               </div>
 
-              <!-- NOVO BLOCO: FORMA DE PAGAMENTO E DATA COM CALENDÁRIO -->
+              <!-- NOVO BLOCO: FORMA DE PAGAMENTO COM PARCELAS HÍBRIDAS -->
               <div class="form-row">
                 <label>Forma de pagamento</label>
 
@@ -168,24 +168,11 @@
                   </select>
                 </div>
 
-                <div class="form-row">
-                  <label for="forma-tipo">Meio de pagamento</label>
-                  <select id="forma-tipo">
-                    <option value="">Selecione...</option>
-                    <option value="Pix">Pix</option>
-                    <option value="Boleto">Boleto</option>
-                    <option value="Cartão">Cartão</option>
-                  </select>
-                </div>
-
-                <div class="form-row">
-                  <label for="forma-data">Data do pagamento (ou 1ª parcela)</label>
-                  <!-- mini calendário padrão HTML5 -->
-                  <input type="date" id="forma-data" />
-                </div>
+                <!-- Aqui o app.js cria 1 linha por parcela (tipo + data) -->
+                <div id="parcelas-container"></div>
 
                 <p id="forma-preview" class="hint">
-                  Selecione parcelas, forma de pagamento e data.
+                  Selecione o número de parcelas; depois defina a forma e a data de cada uma.
                 </p>
               </div>
 
