@@ -2,11 +2,12 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Área do Cliente • Lorentz</title>
+  <title>Área do Cliente • Lorentz Decorações</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- TOPO FIXO -->
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
@@ -32,28 +33,30 @@
     </div>
   </header>
 
+  <!-- HERO DA ÁREA DO CLIENTE -->
   <section id="hero">
     <div class="hero-overlay"></div>
     <div class="hero-content">
       <p class="hero-kicker">ÁREA EXCLUSIVA</p>
-      <h1>Área do cliente</h1>
+      <h1>Área do cliente Lorentz</h1>
       <p class="hero-subtitle">
-        Acompanhe seu orçamento, contrato e pagamentos. A equipe Lorentz usa
-        o mesmo painel para administrar os eventos.
+        Acompanhe seu evento em um só lugar: orçamento aprovado, contrato em PDF,
+        forma de pagamento e status atual, sempre alinhados com a equipe Lorentz.
       </p>
     </div>
   </section>
 
   <main>
     <div class="content-grid">
+      <!-- CARD PRINCIPAL (LOGIN / ADM / CLIENTE) -->
       <section class="card" id="auth-card">
-        <!-- LOGIN -->
+        <!-- LOGIN (CLIENTE OU ADM) -->
         <div id="login-section">
           <p class="section-kicker">Acesso</p>
-          <h2>Faça login</h2>
+          <h2>Faça login no seu painel</h2>
           <p>
-            Use o e-mail e a senha informados pela equipe Lorentz para acessar
-            seus orçamentos e contratos.
+            Use o e-mail e a senha cadastrados pela equipe Lorentz para acessar
+            sua área do cliente ou o Portal ADM.
           </p>
 
           <form id="login-form" class="stack-form">
@@ -67,19 +70,19 @@
             </div>
             <button type="submit" class="btn-primary full">Entrar</button>
             <p class="hint">
-              Ainda não tem acesso? Fale com a equipe pelo WhatsApp 31 98684-1995
-              para criar o seu cadastro.
+              Ainda não tem acesso? Fale com a equipe pelo WhatsApp
+              <strong>31 98684-1995</strong> para criar seu cadastro.
             </p>
             <p id="login-status" class="status"></p>
           </form>
         </div>
 
-        <!-- ADMIN -->
+        <!-- PORTAL ADM (quando o perfil no Supabase tiver role = 'admin') -->
         <div id="admin-section" class="hidden admin-panel">
           <p class="section-kicker">Administração</p>
           <h2>Painel do administrador</h2>
           <p class="hint">
-            Nesta área você gerencia o portfólio (decorações) e as contas das clientes:
+            Aqui você gerencia o portfólio (decorações) e as contas das clientes:
             orçamentos aprovados, contratos em PDF, forma de pagamento e redefinição de senha.
           </p>
 
@@ -174,18 +177,52 @@
           </div>
         </div>
 
-        <!-- CLIENTE -->
+        <!-- ÁREA DO CLIENTE (PAINEL) -->
         <div id="client-section" class="hidden client-panel">
-          <p class="section-kicker">Minha festa</p>
-          <h2>Meus eventos e pagamentos</h2>
+          <p class="section-kicker">Meu painel</p>
+          <h2>Meus eventos, documentos e pagamentos</h2>
           <p class="hint">
-            Aqui você verá seus orçamentos aprovados, contratos em PDF e pagamentos
-            realizados e a vencer, conforme forem cadastrados pela equipe Lorentz.
+            Assim que a equipe Lorentz aprovar o seu orçamento e anexar o contrato,
+            eles aparecerão abaixo em formato de cartão, com links para abrir os PDFs.
           </p>
+
+          <!-- Aqui o JavaScript irá injetar o cartão do orçamento / contrato baseado na tabela "orcamentos" -->
           <div id="client-orcamentos" class="orcamentos-list">
-            <!-- Em breve: preenchido via Supabase com orçamentos/contratos/pagamentos -->
+            <p class="hint">Carregando informações do seu evento...</p>
           </div>
+
+          <hr style="margin: 14px 0" />
+
+          <h3 class="subtitulo">Pagamentos e status</h3>
+          <p class="hint">
+            No próximo passo do projeto, esta área poderá mostrar boletos, vencimentos
+            e comprovantes, de forma semelhante a um extrato: parcelas pagas, pendentes
+            e vencidas, sempre sincronizadas com o painel da Lorentz.
+          </p>
         </div>
+      </section>
+
+      <!-- CARD LATERAL DE EXPLICAÇÃO (INSPIRADO NO DASHBOARD DO LOVABLE) -->
+      <section class="card card-side">
+        <p class="section-kicker">Como funciona</p>
+        <h2>Passo a passo do seu evento</h2>
+        <p class="hint">
+          A ideia aqui é ser o “resumo executivo” do seu painel, no estilo do dashboard
+          que o Lovable criou, mas adaptado ao fluxo real da Lorentz.
+        </p>
+
+        <ul style="margin-top: 10px; font-size: 0.85rem; color: var(--muted); padding-left: 18px;">
+          <li><strong>1. Conversa inicial:</strong> você alinha o sonho da festa com a equipe Lorentz (WhatsApp / reunião).</li>
+          <li><strong>2. Cadastro:</strong> a equipe registra seus dados na tabela <code>clientes</code> (data, local, contato).</li>
+          <li><strong>3. Orçamento aprovado:</strong> é criado um registro em <code>orcamentos</code> com forma de pagamento e links de PDF.</li>
+          <li><strong>4. Área do cliente:</strong> ao fazer login, você vê aqui o orçamento aprovado e o contrato em PDF.</li>
+          <li><strong>5. Pagamentos:</strong> futuramente, esta mesma área mostrará as parcelas, status e comprovantes.</li>
+        </ul>
+
+        <p class="hint" style="margin-top: 10px;">
+          Tudo isso fica sincronizado com o painel ADM usado internamente pela Lorentz,
+          mantendo o cliente e a equipe sempre na mesma página.
+        </p>
       </section>
     </div>
   </main>
@@ -202,6 +239,7 @@
     </p>
   </footer>
 
+  <!-- Mesmo JS central, que decide o que fazer conforme os elementos da página -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
