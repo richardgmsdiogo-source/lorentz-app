@@ -18,9 +18,13 @@ const loginSection = document.getElementById("login-section");
 const adminSection = document.getElementById("admin-section");
 const clientSection = document.getElementById("client-section");
 
+// Header
 const headerSessionText = document.getElementById("header-session-text");
 const headerRole = document.getElementById("header-role");
 const btnLogout = document.getElementById("btn-logout");
+
+// Área do cliente (painel do usuário)
+const clientOrcamentosList = document.getElementById("client-orcamentos");
 
 // Admin: cadastro de decoração
 const formDecor = document.getElementById("form-decor");
@@ -114,6 +118,8 @@ async function handleSession(user) {
     await loadAdminClientes();
   } else {
     setClientUI(name);
+    // se estiver na página cliente.html, carrega os orçamentos/contratos dessa pessoa
+    await loadClientOrcamentosForUser(user);
   }
 }
 
@@ -187,20 +193,22 @@ if (catalogTabs && catalogTabs.length) {
 // ===== Modal / carrossel =====
 async function fetchDecorationImages(decoracaoId, fallbackUrl) {
   const paths = [];
+  const folder = `${decoracaoId}/`; // garante barra no final
+
   try {
     const { data, error } = await supabase.storage
       .from("decoracoes")
-      .list(`${decoracaoId}`, { limit: 20 });
+      .list(folder, { limit: 50 });
 
-    if (!error && data && data.length > 0) {
+    if (error) {
+      console.error("Erro ao listar imagens:", error);
+    } else if (data && data.length > 0) {
       for (const obj of data) {
         const { data: publicData } = supabase.storage
           .from("decoracoes")
-          .getPublicUrl(`${decoracaoId}/${obj.name}`);
+          .getPublicUrl(folder + obj.name);
         paths.push(publicData.publicUrl);
       }
-    } else if (error) {
-      console.error("Erro ao listar imagens:", error);
     }
   } catch (e) {
     console.error("Erro geral ao buscar imagens:", e);
@@ -409,7 +417,7 @@ if (formDecor) {
 
 // ===== Gestão de clientes (admin) =====
 async function loadAdminClientes() {
-  if (!adminClientesList) return; // só existe em cliente.html
+  if (!adminClientesList) return; // só existe em cliente.html/adm.html
 
   adminClientesList.innerHTML = "<p class='hint'>Carregando clientes...</p>";
 
@@ -499,7 +507,7 @@ async function loadOrcamentoCliente(clienteId) {
       "id, valor_total, forma_pagamento, contrato_pdf_url, orcamento_pdf_url"
     )
     .eq("cliente_id", clienteId)
-    .order("criado_em", { ascending: false })
+    .order("id", { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -647,6 +655,108 @@ if (btnResetSenha) {
       console.error(e);
       alert("Erro inesperado ao enviar e-mail de redefinição.");
     }
+  });
+}
+
+// ===== Área do cliente: carregar orçamentos / contratos para o usuário logado =====
+async function loadClientOrcamentosForUser(user) {
+  if (!clientOrcamentosList) return; // não está na página cliente.html
+
+  clientOrcamentosList.innerHTML =
+    "<p class='hint'>Carregando informações do seu evento...</p>";
+
+  const email = user.email;
+  if (!email) {
+    clientOrcamentosList.innerHTML =
+      "<p class='status error'>Não foi possível identificar seu e-mail de acesso.</p>";
+    return;
+  }
+
+  // 1) Descobre o registro de cliente pelo e-mail
+  const { data: clientes, error: cliErr } = await supabase
+    .from("clientes")
+    .select("id, nome, data_evento, endereco_evento")
+    .eq("email", email)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (cliErr) {
+    console.error("Erro ao carregar cliente na área do cliente:", cliErr);
+    clientOrcamentosList.innerHTML =
+      "<p class='status error'>Erro ao carregar seus dados. Tente novamente mais tarde.</p>";
+    return;
+  }
+
+  if (!clientes || !clientes.length) {
+    clientOrcamentosList.innerHTML =
+      "<p class='hint'>Não encontramos nenhum evento vinculado a este e-mail. Confirme com a equipe se seu cadastro já foi criado.</p>";
+    return;
+  }
+
+  const cliente = clientes[0];
+
+  // 2) Busca orçamentos vinculados a esse cliente
+  const { data: orcs, error: orcErr } = await supabase
+    .from("orcamentos")
+    .select(
+      "id, valor_total, forma_pagamento, contrato_pdf_url, orcamento_pdf_url, status"
+    )
+    .eq("cliente_id", cliente.id)
+    .order("id", { ascending: false });
+
+  if (orcErr) {
+    console.error("Erro ao carregar orçamentos na área do cliente:", orcErr);
+    clientOrcamentosList.innerHTML =
+      "<p class='status error'>Erro ao carregar seu orçamento. Tente novamente.</p>";
+    return;
+  }
+
+  if (!orcs || !orcs.length) {
+    clientOrcamentosList.innerHTML =
+      "<p class='hint'>Seu cadastro foi encontrado, mas o orçamento ainda não foi anexado. Assim que o orçamento for aprovado, ele aparecerá aqui com o contrato.</p>";
+    return;
+  }
+
+  clientOrcamentosList.innerHTML = "";
+
+  const dataEventoTexto = cliente.data_evento
+    ? new Date(cliente.data_evento).toLocaleDateString("pt-BR")
+    : "data a definir";
+
+  orcs.forEach((orc) => {
+    const wrapper = document.createElement("article");
+    wrapper.className = "decor-card";
+
+    wrapper.innerHTML = `
+      <div class="decor-tag">Orçamento #${orc.id}</div>
+      <div class="decor-title">${cliente.nome}</div>
+      <p class="hint">
+        Evento em: ${dataEventoTexto}
+        ${cliente.endereco_evento ? " • Local: " + cliente.endereco_evento : ""}
+      </p>
+      <p class="hint">
+        Status: <strong>${orc.status || "aprovado"}</strong>
+        ${
+          orc.forma_pagamento
+            ? " • Forma de pagamento: " + orc.forma_pagamento
+            : ""
+        }
+      </p>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;">
+        ${
+          orc.orcamento_pdf_url
+            ? `<a class="btn-secondary btn-small" href="${orc.orcamento_pdf_url}" target="_blank">Ver orçamento em PDF</a>`
+            : ""
+        }
+        ${
+          orc.contrato_pdf_url
+            ? `<a class="btn-primary btn-small" href="${orc.contrato_pdf_url}" target="_blank">Ver contrato em PDF</a>`
+            : ""
+        }
+      </div>
+    `;
+
+    clientOrcamentosList.appendChild(wrapper);
   });
 }
 
