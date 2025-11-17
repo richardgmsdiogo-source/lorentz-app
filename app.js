@@ -659,6 +659,43 @@ if (formaQtdInput) {
   formaQtdInput.addEventListener("change", buildParcelasUI);
 }
 
+// ===== Parcelas: gravação na tabela "parcelas" =====
+async function salvarParcelas(orcamentoId, clienteId) {
+  if (!parcelasContainer || !formaQtdInput) return;
+
+  const rows = parcelasContainer.querySelectorAll(".parcela-row");
+  const payload = [];
+
+  rows.forEach((row, idx) => {
+    const tipoEl = row.querySelector(".parcela-tipo");
+    const dataEl = row.querySelector(".parcela-data");
+
+    const tipo = tipoEl?.value;
+    const data = dataEl?.value; // AAAA-MM-DD
+
+    if (!tipo || !data) return; // ignora linhas incompletas
+
+    payload.push({
+      orcamento_id: orcamentoId,
+      cliente_id: clienteId,
+      numero: idx + 1,
+      tipo,
+      data_venc: data,
+      status: "aberta",
+    });
+  });
+
+  // Remove parcelas antigas desse orçamento e recria
+  await supabase.from("parcelas").delete().eq("orcamento_id", orcamentoId);
+
+  if (!payload.length) return;
+
+  const { error } = await supabase.from("parcelas").insert(payload);
+  if (error) {
+    console.error("Erro ao salvar parcelas:", error);
+  }
+}
+
 // ===== formulário de documentos (contrato, orçamento, forma de pagamento) =====
 if (formDocumentos) {
   formDocumentos.addEventListener("submit", async (e) => {
@@ -698,6 +735,13 @@ if (formDocumentos) {
         .from("orcamentos")
         .update({ forma_pagamento: formaTexto || null })
         .eq("id", orc.id);
+    }
+
+    // Salva/atualiza parcelas na tabela "parcelas"
+    try {
+      await salvarParcelas(orc.id, clienteSelecionado.id);
+    } catch (err) {
+      console.error("Erro ao salvar parcelas:", err);
     }
 
     const atualizacoes = {};
@@ -796,7 +840,7 @@ if (btnResetSenha) {
   });
 }
 
-// ===== Resumo das parcelas na área do cliente =====
+// ===== Resumo das parcelas na área do cliente (com base no texto) =====
 function renderPagamentosResumo(orc) {
   if (!clientPagamentosList) return;
 
