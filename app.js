@@ -25,6 +25,7 @@ const btnLogout = document.getElementById("btn-logout");
 
 // Área do cliente (painel do usuário)
 const clientOrcamentosList = document.getElementById("client-orcamentos");
+const clientPagamentosList = document.getElementById("client-pagamentos");
 
 // Admin: cadastro de decoração
 const formDecor = document.getElementById("form-decor");
@@ -747,7 +748,7 @@ if (formDocumentos) {
       .eq("id", orc.id);
 
     if (updErr) {
-      console.error("Erro ao atualizar orçamento:", updErr);
+      console.error("Erro ao salvar dados:", updErr);
       documentosStatus.textContent =
         "Erro ao salvar dados: " + updErr.message;
       documentosStatus.className = "status error";
@@ -795,17 +796,67 @@ if (btnResetSenha) {
   });
 }
 
+// ===== Resumo das parcelas na área do cliente =====
+function renderPagamentosResumo(orc) {
+  if (!clientPagamentosList) return;
+
+  if (!orc || !orc.forma_pagamento) {
+    clientPagamentosList.innerHTML = `
+      <p class="hint">
+        Ainda não há forma de pagamento cadastrada para o seu orçamento.
+      </p>`;
+    return;
+  }
+
+  const partes = orc.forma_pagamento
+    .split("|")
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+
+  clientPagamentosList.innerHTML = "";
+
+  const card = document.createElement("article");
+  card.className = "decor-card";
+
+  card.innerHTML = `
+    <div class="decor-tag">Resumo das parcelas</div>
+    <div class="decor-title">${partes.length} parcela(s) combinadas</div>
+  `;
+
+  const ul = document.createElement("ul");
+  ul.style.marginTop = "8px";
+  ul.style.fontSize = "0.85rem";
+  ul.style.color = "var(--muted)";
+  ul.style.paddingLeft = "18px";
+
+  partes.forEach((txt) => {
+    const li = document.createElement("li");
+    li.textContent = txt;
+    ul.appendChild(li);
+  });
+
+  card.appendChild(ul);
+  clientPagamentosList.appendChild(card);
+}
+
 // ===== Área do cliente: carregar orçamentos / contratos para o usuário logado =====
 async function loadClientOrcamentosForUser(user) {
   if (!clientOrcamentosList) return;
 
   clientOrcamentosList.innerHTML =
     "<p class='hint'>Carregando informações do seu evento...</p>";
+  if (clientPagamentosList) {
+    clientPagamentosList.innerHTML =
+      "<p class='hint'>Carregando informações de pagamento...</p>";
+  }
 
   const email = user.email;
   if (!email) {
     clientOrcamentosList.innerHTML =
       "<p class='status error'>Não foi possível identificar seu e-mail de acesso.</p>";
+    if (clientPagamentosList) {
+      clientPagamentosList.innerHTML = "";
+    }
     return;
   }
 
@@ -821,12 +872,19 @@ async function loadClientOrcamentosForUser(user) {
     console.error("Erro ao carregar orçamentos na área do cliente:", orcErr);
     clientOrcamentosList.innerHTML =
       "<p class='status error'>Erro ao carregar seu orçamento. Tente novamente.</p>";
+    if (clientPagamentosList) {
+      clientPagamentosList.innerHTML = "";
+    }
     return;
   }
 
   if (!orcs || !orcs.length) {
     clientOrcamentosList.innerHTML =
       "<p class='hint'>Ainda não encontramos nenhum orçamento vinculado a este e-mail. Assim que a equipe Lorentz anexar o orçamento e o contrato, eles aparecerão aqui.</p>";
+    if (clientPagamentosList) {
+      clientPagamentosList.innerHTML =
+        "<p class='hint'>Nenhuma forma de pagamento cadastrada ainda.</p>";
+    }
     return;
   }
 
@@ -894,6 +952,9 @@ async function loadClientOrcamentosForUser(user) {
 
     clientOrcamentosList.appendChild(wrapper);
   });
+
+  // Usa o orçamento mais recente para montar o resumo de parcelas
+  renderPagamentosResumo(primeiro);
 }
 
 // ===== Inicialização =====
