@@ -46,6 +46,12 @@ const adminClienteDetalhe = document.getElementById("admin-cliente-detalhe");
 const clienteNomeTitulo = document.getElementById("cliente-nome-titulo");
 const clienteInfoBasica = document.getElementById("cliente-info-basica");
 
+// Cadastro de clientes (admin + visitante)
+const adminClienteForm = document.getElementById("admin-cliente-form");
+const adminClienteStatus = document.getElementById("admin-cliente-status");
+const clienteCadastroForm = document.getElementById("cliente-cadastro-form");
+const clienteCadastroStatus = document.getElementById("cliente-cadastro-status");
+
 const formDocumentos = document.getElementById("form-documentos");
 const orcamentoPdfInput = document.getElementById("orcamento-pdf");
 const contratoPdfInput = document.getElementById("contrato-pdf");
@@ -124,6 +130,98 @@ async function handleSession(user) {
     setClientUI(name);
     await loadClientOrcamentosForUser(user);
   }
+}
+
+
+
+// ===== Cadastro de clientes (admin e visitante) =====
+
+function buildClientePayload(prefix) {
+  const get = (id) => {
+    const el = document.getElementById(prefix + id);
+    return el ? el.value.trim() : "";
+  };
+
+  const nomeContratante = get("nome-contratante");
+  const nomeNoivos = get("nome-noivos");
+  const email = get("email");
+  const telefone = get("telefone");
+  const telefoneWhats = get("telefone-whatsapp");
+  const cpf = get("cpf");
+  const dataEvento = get("data-evento");
+  const horaEvento = get("hora-evento");
+  const endResidencial = get("endereco-residencial");
+  const endEvento = get("endereco-evento");
+
+  return {
+    nome_contratante: nomeContratante || null,
+    nome_noivos: nomeNoivos || null,
+    email: email || null,
+    telefone: telefone || null,
+    telefone_whatsapp: telefoneWhats || telefone || null,
+    cpf: cpf || null,
+    documento: cpf || null,              // espelha CPF em documento
+    data_evento: dataEvento || null,
+    hora_evento: horaEvento || null,
+    horario_evento: horaEvento || null,  // espelho, se existir essa coluna
+    endereco_residencial: endResidencial || null,
+    endereco_evento: endEvento || null,
+    nome: nomeContratante || null        // espelha contratante em nome
+  };
+}
+
+async function inserirCliente(payload, statusEl) {
+  if (!statusEl) statusEl = { textContent: "", className: "" };
+
+  if (!payload.nome_contratante || !payload.email || !payload.telefone) {
+    statusEl.textContent =
+      "Preencha pelo menos nome do contratante, telefone e e-mail.";
+    statusEl.className = "status error";
+    return;
+  }
+
+  statusEl.textContent = "Salvando cadastro...";
+  statusEl.className = "status";
+
+  const { error } = await supabase.from("clientes").insert(payload);
+
+  if (error) {
+    console.error("Erro ao salvar cliente:", error);
+    statusEl.textContent = "Erro ao salvar cliente: " + error.message;
+    statusEl.className = "status error";
+    return;
+  }
+
+  statusEl.textContent = "Cliente cadastrado com sucesso!";
+  statusEl.className = "status ok";
+}
+
+// Listener do formulário de cadastro do ADM
+if (adminClienteForm) {
+  adminClienteForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const payload = buildClientePayload("admin-");
+    await inserirCliente(payload, adminClienteStatus);
+    if (!adminClienteStatus.className.includes("error")) {
+      adminClienteForm.reset();
+      // recarrega a lista de clientes no painel ADM
+      if (typeof loadAdminClientes === "function") {
+        await loadAdminClientes();
+      }
+    }
+  });
+}
+
+// Listener do formulário de cadastro do visitante (cliente.html)
+if (clienteCadastroForm) {
+  clienteCadastroForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const payload = buildClientePayload("cli-");
+    await inserirCliente(payload, clienteCadastroStatus);
+    if (!clienteCadastroStatus.className.includes("error")) {
+      clienteCadastroForm.reset();
+    }
+  });
 }
 
 // ===== Catálogo =====
