@@ -121,7 +121,108 @@
             <p id="decor-status" class="status"></p>
           </form>
 
-          <!-- BLOCO: GESTÃO DE CLIENTES -->
+          <!-- BLOCO: CADASTRO DE CLIENTE (ADM) -->
+          <hr />
+          <h3 class="subtitulo">Cadastrar novo cliente</h3>
+          <p class="hint">
+            Este cadastro grava diretamente na tabela <code>clientes</code>. Preencha os dados do
+            contratante e as informações principais do evento. Campos como
+            <code>nome</code> e <code>documento</code> podem ser espelhados do contratante/CPF via
+            código (app.js).
+          </p>
+
+          <form id="admin-cliente-form" class="stack-form">
+            <div class="form-row">
+              <label for="admin-nome-contratante">Nome do contratante</label>
+              <input
+                id="admin-nome-contratante"
+                required
+                placeholder="Quem está fechando o contrato"
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="admin-nome-noivos">Nome dos noivos / aniversariante</label>
+              <input
+                id="admin-nome-noivos"
+                placeholder="Ex.: Ana & Bruno, João (15 anos)..."
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="admin-email">E-mail</label>
+              <input
+                id="admin-email"
+                type="email"
+                required
+                placeholder="email@exemplo.com"
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="admin-telefone">Telefone principal</label>
+              <input
+                id="admin-telefone"
+                required
+                placeholder="DDD + número"
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="admin-telefone-whatsapp">WhatsApp</label>
+              <input
+                id="admin-telefone-whatsapp"
+                placeholder="Se for o mesmo do telefone, pode repetir"
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="admin-cpf">CPF do contratante</label>
+              <input
+                id="admin-cpf"
+                placeholder="Somente números"
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="admin-data-evento">Data do evento</label>
+              <input
+                id="admin-data-evento"
+                type="date"
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="admin-hora-evento">Horário do evento</label>
+              <input
+                id="admin-hora-evento"
+                type="time"
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="admin-endereco-residencial">Endereço residencial</label>
+              <input
+                id="admin-endereco-residencial"
+                placeholder="Rua, número, bairro, cidade"
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="admin-endereco-evento">Endereço do evento</label>
+              <input
+                id="admin-endereco-evento"
+                placeholder="Salão, sítio, buffet..."
+              />
+            </div>
+
+            <button type="submit" class="btn-primary">
+              Salvar cliente
+            </button>
+            <p id="admin-cliente-status" class="status"></p>
+          </form>
+
+          <!-- BLOCO: GESTÃO DE CLIENTES EXISTENTES -->
           <hr />
           <h3 class="subtitulo">Gestão de clientes</h3>
           <p class="hint">
@@ -148,7 +249,7 @@
                 <input id="contrato-pdf" type="file" accept="application/pdf" />
               </div>
 
-              <!-- NOVO BLOCO: FORMA DE PAGAMENTO COM PARCELAS HÍBRIDAS -->
+              <!-- FORMA DE PAGAMENTO COM PARCELAS HÍBRIDAS -->
               <div class="form-row">
                 <label>Forma de pagamento</label>
 
@@ -168,7 +269,7 @@
                   </select>
                 </div>
 
-                <!-- Aqui o app.js cria 1 linha por parcela (tipo + data) -->
+                <!-- app.js cria 1 linha por parcela (tipo + data) -->
                 <div id="parcelas-container"></div>
 
                 <p id="forma-preview" class="hint">
