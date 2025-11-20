@@ -555,3 +555,54 @@ h2 {
   border-top: 1px solid var(--border);
 }
 
+/* Agenda and Finance styles */
+.agenda-list,
+.finance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.agenda-item,
+.finance-item {
+  background: var(--card2);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.agenda-main,
+.finance-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.agenda-location,
+.agenda-contact,
+.finance-info {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.finance-summary {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.finance-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.finance-item .btn-small {
+  margin-top: 8px;
+}
+

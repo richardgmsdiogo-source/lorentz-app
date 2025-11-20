@@ -63,6 +63,10 @@ const formaQtdInput = document.getElementById("forma-qtd");
 const parcelasContainer = document.getElementById("parcelas-container");
 const formaPreview = document.getElementById("forma-preview");
 
+// Admin: agenda e financeiro
+const adminAgendaList = document.getElementById("admin-agenda-list");
+const adminFinanceSummary = document.getElementById("admin-finance-summary");
+const adminFinanceList = document.getElementById("admin-finance-list");
 let clienteSelecionado = null;
 let orcamentoAtual = null;
 
@@ -126,6 +130,9 @@ async function handleSession(user) {
   if (profile?.role === "admin") {
     setAdminUI(name);
     await loadAdminClientes();
+    // Carrega agenda e dashboard financeiro ao abrir o painel ADM
+    await loadAdminAgenda();
+    await loadAdminFinance();
   } else {
     setClientUI(name);
     await loadClientOrcamentosForUser(user);
@@ -1097,6 +1104,11 @@ async function loadClientOrcamentosForUser(user) {
 
   // Usa o orçamento mais recente para montar o resumo de parcelas
   renderPagamentosResumo(primeiro);
+  // Carrega parcelas detalhadas e status para o cliente
+  const clientIdForParcels = cliente?.id || primeiro.cliente_id;
+  if (clientIdForParcels) {
+    await loadClientParcelas(clientIdForParcels);
+  }
 }
 
 // ===== Inicialização =====
