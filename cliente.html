@@ -33,22 +33,22 @@
     </div>
   </header>
 
-  <!-- HERO DA ÁREA DO CLIENTE -->
+  <!-- HERO -->
   <section id="hero">
     <div class="hero-overlay"></div>
     <div class="hero-content">
-      <p class="hero-kicker">ÁREA EXCLUSIVA</p>
-      <h1>Área do cliente Lorentz</h1>
+      <p class="hero-kicker">ÁREA DO CLIENTE</p>
+      <h1>Acompanhe seu evento com a Lorentz</h1>
       <p class="hero-subtitle">
-        Acompanhe seu evento em um só lugar: orçamento aprovado, contrato em PDF,
-        forma de pagamento e status atual, sempre alinhados com a equipe Lorentz.
+        Aqui você vai enxergar os detalhes do seu evento: orçamento aprovado, contrato
+        e forma de pagamento. Se ainda não tem cadastro, você pode se registrar logo abaixo.
       </p>
     </div>
   </section>
 
   <main>
     <div class="content-grid">
-      <!-- CARD PRINCIPAL (LOGIN / CLIENTE) -->
+      <!-- CARD PRINCIPAL (LOGIN / CLIENTE / CADASTRO) -->
       <section class="card" id="auth-card">
         <!-- LOGIN (CLIENTE) -->
         <div id="login-section">
@@ -69,21 +69,125 @@
               <input id="password" type="password" required placeholder="Sua senha" />
             </div>
             <button type="submit" class="btn-primary full">Entrar</button>
-            <p class="hint">
-              Ainda não tem acesso? Fale com a equipe pelo WhatsApp
-              <strong>31 98684-1995</strong> para criar seu cadastro.
-            </p>
             <p id="login-status" class="status"></p>
+          </form>
+
+          <hr style="margin: 18px 0" />
+
+          <!-- AUTOCADASTRO DO CLIENTE (VISITANTE) -->
+          <p class="section-kicker">Ainda não tem cadastro?</p>
+          <h2>Cadastre seus dados com a Lorentz</h2>
+          <p class="hint">
+            Preencha seus dados e as informações principais do evento. A equipe Lorentz
+            usará esse cadastro para montar o orçamento e, depois, liberar o acesso
+            completo à sua área do cliente.
+          </p>
+
+          <form id="cliente-cadastro-form" class="stack-form">
+            <div class="form-row">
+              <label for="cli-nome-contratante">Nome do contratante</label>
+              <input
+                id="cli-nome-contratante"
+                required
+                placeholder="Seu nome completo"
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="cli-nome-noivos">Nome dos noivos / aniversariante</label>
+              <input
+                id="cli-nome-noivos"
+                placeholder="Ex.: Ana & Bruno, João (15 anos)..."
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="cli-email">E-mail</label>
+              <input
+                id="cli-email"
+                type="email"
+                required
+                placeholder="email@exemplo.com"
+              />
+            </div>
+
+            <div class="form-row two-cols">
+              <div>
+                <label for="cli-telefone">Telefone principal</label>
+                <input
+                  id="cli-telefone"
+                  required
+                  placeholder="DDD + número"
+                />
+              </div>
+              <div>
+                <label for="cli-telefone-whatsapp">WhatsApp</label>
+                <input
+                  id="cli-telefone-whatsapp"
+                  placeholder="Se for o mesmo, pode repetir"
+                />
+              </div>
+            </div>
+
+            <div class="form-row two-cols">
+              <div>
+                <label for="cli-cpf">CPF do contratante</label>
+                <input
+                  id="cli-cpf"
+                  placeholder="Somente números"
+                />
+              </div>
+              <div>
+                <label for="cli-data-evento">Data do evento</label>
+                <input
+                  id="cli-data-evento"
+                  type="date"
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label for="cli-hora-evento">Horário do evento</label>
+              <input
+                id="cli-hora-evento"
+                type="time"
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="cli-endereco-residencial">Endereço residencial</label>
+              <input
+                id="cli-endereco-residencial"
+                placeholder="Rua, número, bairro, cidade"
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="cli-endereco-evento">Endereço do evento</label>
+              <input
+                id="cli-endereco-evento"
+                placeholder="Salão, sítio, buffet..."
+              />
+            </div>
+
+            <button type="submit" class="btn-primary full">Enviar meus dados</button>
+            <p id="cliente-cadastro-status" class="status"></p>
           </form>
         </div>
 
-        <!-- ÁREA DO CLIENTE (PAINEL) -->
-        <div id="client-section" class="hidden client-panel">
-          <p class="section-kicker">Meu painel</p>
-          <h2>Meus eventos, documentos e pagamentos</h2>
+        <!-- PAINEL DO CLIENTE (aparece depois do login) -->
+        <div id="client-section" class="hidden">
+          <p class="section-kicker">Área do cliente</p>
+          <h2>Resumo do seu evento</h2>
           <p class="hint">
-            Assim que a equipe Lorentz aprovar o seu orçamento e anexar o contrato,
-            eles aparecerão abaixo em formato de cartão, com links para abrir os PDFs.
+            Aqui você acompanha o que já foi alinhado com a Lorentz: dados do evento,
+            orçamento aprovado, contrato e forma de pagamento.
+          </p>
+
+          <h3 class="subtitulo">Orçamento e contrato</h3>
+          <p class="hint">
+            Assim que sua proposta for aprovada pela equipe, o orçamento e o contrato
+            aparecerão aqui em PDF para consulta.
           </p>
 
           <!-- Preenchido via app.js com base na tabela "orcamentos" -->
@@ -114,16 +218,16 @@
         <p class="section-kicker">Como funciona</p>
         <h2>Passo a passo do seu evento</h2>
         <p class="hint">
-          Este painel mostra o que já foi alinhado com a Lorentz e deixa você sempre
-          na mesma página que a equipe.
+          Este painel mostra o que já foi alinhado com a Lorentz e mantém você
+          sempre na mesma página que a equipe.
         </p>
 
         <ul style="margin-top: 10px; font-size: 0.85rem; color: var(--muted); padding-left: 18px;">
-          <li><strong>1. Conversa inicial:</strong> você alinha o sonho da festa com a equipe Lorentz (WhatsApp / reunião).</li>
-          <li><strong>2. Cadastro:</strong> a equipe registra seus dados na tabela <code>clientes</code> (data, local, contato).</li>
-          <li><strong>3. Orçamento aprovado:</strong> é criado um registro em <code>orcamentos</code> com forma de pagamento e links de PDF.</li>
+          <li><strong>1. Conversa inicial:</strong> você conta o sonho da festa para a equipe Lorentz (WhatsApp / reunião).</li>
+          <li><strong>2. Cadastro:</strong> seus dados e do evento são registrados na tabela <code>clientes</code> (data, local, contato).</li>
+          <li><strong>3. Orçamento:</strong> a equipe monta a proposta e, quando aprovado, gera um registro em <code>orcamentos</code>.</li>
           <li><strong>4. Área do cliente:</strong> ao fazer login, você vê aqui o orçamento aprovado e o contrato em PDF.</li>
-          <li><strong>5. Pagamentos:</strong> você acompanha a forma de pagamento combinada e, futuramente, o status das parcelas.</li>
+          <li><strong>5. Pagamentos:</strong> você acompanha a forma de pagamento combinada e, no futuro, o status das parcelas.</li>
         </ul>
 
         <p class="hint" style="margin-top: 10px;">
@@ -146,7 +250,7 @@
     </p>
   </footer>
 
-  <!-- Mesmo JS central, que decide o que fazer conforme os elementos da página -->
+  <!-- JS central -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
