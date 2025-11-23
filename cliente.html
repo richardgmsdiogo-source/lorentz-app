@@ -7,11 +7,10 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- TOPO FIXO -->
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
-        <div class="brand-logo">L</div>
+        <img src="logo.png" alt="Lorentz Decorações e Eventos" class="brand-logo-img" />
         <div class="brand-text">
           <span class="brand-name">Lorentz Decorações de Festas e Eventos BH e Região</span>
           <span class="brand-sub">
@@ -23,7 +22,6 @@
         <a href="index.html" class="nav-link">Início</a>
         <a href="catalogo.html" class="nav-link">Catálogo</a>
         <a href="cliente.html" class="nav-link nav-active">Área do cliente</a>
-        <a href="adm.html" class="nav-link">Portal ADM</a>
       </nav>
       <div class="user-info">
         <span id="header-session-text">Visitante</span>
@@ -33,7 +31,6 @@
     </div>
   </header>
 
-  <!-- HERO -->
   <section id="hero">
     <div class="hero-overlay"></div>
     <div class="hero-content">
@@ -48,9 +45,7 @@
 
   <main>
     <div class="content-grid">
-      <!-- CARD PRINCIPAL (LOGIN / CLIENTE / CADASTRO) -->
       <section class="card" id="auth-card">
-        <!-- LOGIN (CLIENTE) -->
         <div id="login-section">
           <p class="section-kicker">Acesso</p>
           <h2>Faça login no seu painel</h2>
@@ -74,7 +69,6 @@
 
           <hr style="margin: 18px 0" />
 
-          <!-- AUTOCADASTRO DO CLIENTE (VISITANTE) -->
           <p class="section-kicker">Ainda não tem cadastro?</p>
           <h2>Cadastre seus dados com a Lorentz</h2>
           <p class="hint">
@@ -175,7 +169,6 @@
           </form>
         </div>
 
-        <!-- PAINEL DO CLIENTE (aparece depois do login) -->
         <div id="client-section" class="hidden">
           <p class="section-kicker">Área do cliente</p>
           <h2>Resumo do seu evento</h2>
@@ -190,7 +183,6 @@
             aparecerão aqui em PDF para consulta.
           </p>
 
-          <!-- Preenchido via app.js com base na tabela "orcamentos" -->
           <div id="client-orcamentos" class="orcamentos-list">
             <p class="hint">Carregando informações do seu evento...</p>
           </div>
@@ -202,7 +194,6 @@
             Abaixo você acompanha as parcelas definidas com a equipe Lorentz e o status de pagamento de cada uma.
           </p>
 
-          <!-- Resumo das parcelas e status de pagamento (preenchido via app.js) -->
           <div id="client-pagamentos" class="orcamentos-list">
             <p class="hint">
               Ainda não há forma de pagamento cadastrada para o seu orçamento.
@@ -211,7 +202,6 @@
         </div>
       </section>
 
-      <!-- CARD LATERAL DE EXPLICAÇÃO -->
       <section class="card card-side">
         <p class="section-kicker">Como funciona</p>
         <h2>Passo a passo do seu evento</h2>
@@ -229,7 +219,7 @@
         </ul>
 
         <p class="hint" style="margin-top: 10px;">
-          Tudo isso fica sincronizado com o painel ADM usado internamente pela Lorentz,
+          Tudo isso fica sincronizado com o painel ADM (app interno) usado pela Lorentz,
           mantendo o cliente e a equipe sempre alinhados até o dia da festa.
         </p>
       </section>
@@ -248,7 +238,6 @@
     </p>
   </footer>
 
-  <!-- JS central -->
   <script type="module" src="app.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
-// Código principal do portal Lorentz.
-// Funciona em QUALQUER página (index, catalogo, cliente):
-// só executa o que tiver elementos na página atual.
+// Código principal do portal Lorentz (versão somente catálogo + área do cliente).
+// Agora o acesso ADM é feito apenas pelo app interno; o site foca no portfólio
+// e na experiência da cliente.
 
 import { supabase } from "./config.js";
 
@@ -10,12 +10,11 @@ import { supabase } from "./config.js";
 const catalogoGrid = document.getElementById("catalogo-grid");
 const catalogTabs = document.querySelectorAll(".catalog-tab");
 
-// Login / sessão
+// Login / sessão (área do cliente)
 const loginForm = document.getElementById("login-form");
 const loginStatus = document.getElementById("login-status");
 
 const loginSection = document.getElementById("login-section");
-const adminSection = document.getElementById("admin-section");
 const clientSection = document.getElementById("client-section");
 
 // Header
@@ -27,53 +26,18 @@ const btnLogout = document.getElementById("btn-logout");
 const clientOrcamentosList = document.getElementById("client-orcamentos");
 const clientPagamentosList = document.getElementById("client-pagamentos");
 
-// Admin: cadastro de decoração
-const formDecor = document.getElementById("form-decor");
-const decorCategoria = document.getElementById("decor-categoria");
-const decorTitulo = document.getElementById("decor-titulo");
-const decorDescricao = document.getElementById("decor-descricao");
-const decorImagem = document.getElementById("decor-imagem");
-const decorStatus = document.getElementById("decor-status");
+// Cadastro de clientes (visitante)
+const clienteCadastroForm = document.getElementById("cliente-cadastro-form");
+const clienteCadastroStatus = document.getElementById("cliente-cadastro-status");
 
 // Modal do catálogo (usado em catalogo.html)
 const decorModal = document.getElementById("decor-modal");
 const decorModalClose = document.getElementById("decor-modal-close");
 const decorModalContent = document.getElementById("decor-modal-content");
 
-// Admin: gestão de clientes
-const adminClientesList = document.getElementById("admin-clientes-list");
-const adminClienteDetalhe = document.getElementById("admin-cliente-detalhe");
-const clienteNomeTitulo = document.getElementById("cliente-nome-titulo");
-const clienteInfoBasica = document.getElementById("cliente-info-basica");
-
-// Cadastro de clientes (admin + visitante)
-const adminClienteForm = document.getElementById("admin-cliente-form");
-const adminClienteStatus = document.getElementById("admin-cliente-status");
-const clienteCadastroForm = document.getElementById("cliente-cadastro-form");
-const clienteCadastroStatus = document.getElementById("cliente-cadastro-status");
-
-const formDocumentos = document.getElementById("form-documentos");
-const orcamentoPdfInput = document.getElementById("orcamento-pdf");
-const contratoPdfInput = document.getElementById("contrato-pdf");
-const documentosStatus = document.getElementById("documentos-status");
-const btnResetSenha = document.getElementById("btn-reset-senha");
-
-// NOVOS campos para forma de pagamento parcelada
-const formaQtdInput = document.getElementById("forma-qtd");
-const parcelasContainer = document.getElementById("parcelas-container");
-const formaPreview = document.getElementById("forma-preview");
-
-// Admin: agenda e financeiro
-const adminAgendaList = document.getElementById("admin-agenda-list");
-const adminFinanceSummary = document.getElementById("admin-finance-summary");
-const adminFinanceList = document.getElementById("admin-finance-list");
-let clienteSelecionado = null;
-let orcamentoAtual = null;
-
 // ===== UI de sessão =====
 function setLoggedOutUI() {
   if (loginSection) loginSection.classList.remove("hidden");
-  if (adminSection) adminSection.classList.add("hidden");
   if (clientSection) clientSection.classList.add("hidden");
 
   if (headerSessionText) headerSessionText.textContent = "Visitante";
@@ -81,22 +45,8 @@ function setLoggedOutUI() {
   if (btnLogout) btnLogout.classList.add("hidden");
 }
 
-function setAdminUI(name) {
-  if (loginSection) loginSection.classList.add("hidden");
-  if (adminSection) adminSection.classList.remove("hidden");
-  if (clientSection) clientSection.classList.add("hidden");
-
-  if (headerSessionText) headerSessionText.textContent = name || "Administrador";
-  if (headerRole) {
-    headerRole.textContent = "ADMIN";
-    headerRole.classList.remove("hidden");
-  }
-  if (btnLogout) btnLogout.classList.remove("hidden");
-}
-
 function setClientUI(name) {
   if (loginSection) loginSection.classList.add("hidden");
-  if (adminSection) adminSection.classList.add("hidden");
   if (clientSection) clientSection.classList.remove("hidden");
 
   if (headerSessionText) headerSessionText.textContent = name || "Cliente";
@@ -113,35 +63,23 @@ async function handleSession(user) {
     return;
   }
 
+  // Busca apenas o nome no profile (role agora é usada só no app ADM)
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("name, role")
+    .select("name")
     .eq("id", user.id)
     .maybeSingle();
 
   if (error) {
     console.error("Erro ao carregar profile:", error);
-    setLoggedOutUI();
-    return;
   }
 
   const name = profile?.name || user.email;
-
-  if (profile?.role === "admin") {
-    setAdminUI(name);
-    await loadAdminClientes();
-    // Carrega agenda e dashboard financeiro ao abrir o painel ADM
-    await loadAdminAgenda();
-    await loadAdminFinance();
-  } else {
-    setClientUI(name);
-    await loadClientOrcamentosForUser(user);
-  }
+  setClientUI(name);
+  await loadClientOrcamentosForUser(user);
 }
 
-
-
-// ===== Cadastro de clientes (admin e visitante) =====
+// ===== Cadastro de clientes (visitante) =====
 
 function buildClientePayload(prefix) {
   const get = (id) => {
@@ -203,22 +141,6 @@ async function inserirCliente(payload, statusEl) {
   statusEl.className = "status ok";
 }
 
-// Listener do formulário de cadastro do ADM
-if (adminClienteForm) {
-  adminClienteForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const payload = buildClientePayload("admin-");
-    await inserirCliente(payload, adminClienteStatus);
-    if (!adminClienteStatus.className.includes("error")) {
-      adminClienteForm.reset();
-      // recarrega a lista de clientes no painel ADM
-      if (typeof loadAdminClientes === "function") {
-        await loadAdminClientes();
-      }
-    }
-  });
-}
-
 // Listener do formulário de cadastro do visitante (cliente.html)
 if (clienteCadastroForm) {
   clienteCadastroForm.addEventListener("submit", async (e) => {
@@ -264,7 +186,7 @@ async function loadCatalog(categoria = "todos") {
     div.className = "decor-card";
     div.innerHTML =
       '<div class="decor-title">Nenhuma decoração cadastrada</div>' +
-      '<div class="decor-desc">Use o painel do administrador para cadastrar seus cenários.</div>';
+      '<div class="decor-desc">As produções serão adicionadas em breve.</div>';
     catalogoGrid.appendChild(div);
     return;
   }
@@ -386,7 +308,7 @@ if (decorModal && decorModalClose) {
   });
 }
 
-// ===== Login / logout =====
+// ===== Login / logout (área do cliente) =====
 if (loginForm) {
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -438,514 +360,7 @@ if (btnLogout) {
   });
 }
 
-// ===== Cadastro de decoração (admin) =====
-if (formDecor) {
-  formDecor.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (!decorStatus) return;
-
-    decorStatus.textContent = "";
-    decorStatus.className = "status";
-
-    const titulo = decorTitulo.value.trim();
-    const categoria = decorCategoria.value.trim();
-    const descricao = decorDescricao.value.trim();
-    const files = decorImagem.files;
-
-    if (!titulo) {
-      decorStatus.textContent = "Informe pelo menos o título da decoração.";
-      decorStatus.className = "status error";
-      return;
-    }
-
-    decorStatus.textContent = "Salvando decoração...";
-
-    const { data: decoData, error: decoError } = await supabase
-      .from("decoracoes")
-      .insert({
-        categoria: categoria || null,
-        titulo,
-        descricao: descricao || null,
-        ativo: true,
-      })
-      .select("id")
-      .single();
-
-    if (decoError) {
-      console.error("Erro ao inserir decoração:", decoError);
-      decorStatus.textContent =
-        "Erro ao salvar decoração: " + decoError.message;
-      decorStatus.className = "status error";
-      return;
-    }
-
-    const decoracaoId = decoData.id;
-    let capaUrl = null;
-    let imagensSalvas = 0;
-    let errosImagens = 0;
-
-    if (files && files.length > 0) {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const ext = file.name.split(".").pop();
-        const unique = `${Date.now()}-${i}-${Math.random()
-          .toString(36)
-          .substring(2, 8)}`;
-        const path = `${decoracaoId}/${unique}.${ext}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("decoracoes")
-          .upload(path, file);
-
-        if (uploadError) {
-          console.error("Erro ao enviar imagem:", uploadError);
-          errosImagens++;
-          continue;
-        }
-
-        const { data: publicData } = supabase.storage
-          .from("decoracoes")
-          .getPublicUrl(path);
-        const publicUrl = publicData.publicUrl;
-
-        if (!capaUrl) {
-          capaUrl = publicUrl;
-        }
-
-        const { error: imgError } = await supabase
-          .from("decoracao_imagens")
-          .insert({
-            decoracao_id: decoracaoId,
-            titulo,
-            url: publicUrl,
-            ordem: i,
-          })
-          .select("id")
-          .single();
-
-        if (imgError) {
-          console.error("Erro ao salvar imagem no banco:", imgError);
-          errosImagens++;
-        } else {
-          imagensSalvas++;
-        }
-      }
-    }
-
-    if (capaUrl) {
-      await supabase
-        .from("decoracoes")
-        .update({ imagem_url: capaUrl, capa_url: capaUrl })
-        .eq("id", decoracaoId);
-    }
-
-    if (errosImagens > 0 && imagensSalvas === 0) {
-      decorStatus.textContent =
-        "Decoração criada, mas houve erro ao salvar todas as imagens. Veja o console para detalhes.";
-      decorStatus.className = "status error";
-    } else if (errosImagens > 0 && imagensSalvas > 0) {
-      decorStatus.textContent =
-        `Decoração criada. ${imagensSalvas} imagem(ns) salva(s), ${errosImagens} com erro. Veja o console.`;
-      decorStatus.className = "status";
-    } else if (imagensSalvas > 0) {
-      decorStatus.textContent = "Decoração cadastrada com sucesso!";
-      decorStatus.className = "status ok";
-    } else {
-      decorStatus.textContent =
-        "Decoração cadastrada sem imagens. Você selecionou arquivos?";
-      decorStatus.className = "status";
-    }
-
-    formDecor.reset();
-
-    const activeTab = document.querySelector(".catalog-tab.active");
-    const currentCat = activeTab ? activeTab.dataset.categoria : "todos";
-    await loadCatalog(currentCat);
-  });
-}
-
-// ===== Gestão de clientes (admin) =====
-async function loadAdminClientes() {
-  if (!adminClientesList) return;
-
-  adminClientesList.innerHTML = "<p class='hint'>Carregando clientes...</p>";
-
-  const { data, error } = await supabase
-    .from("clientes")
-    .select(
-      "id, nome, email, telefone, documento, data_evento, endereco_evento"
-    )
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("Erro ao carregar clientes:", error);
-    adminClientesList.innerHTML =
-      "<p class='status error'>Erro ao carregar clientes: " +
-      error.message +
-      "</p>";
-    return;
-  }
-
-  if (!data || data.length === 0) {
-    adminClientesList.innerHTML =
-      "<p class='hint'>Nenhum cliente cadastrado ainda.</p>";
-    return;
-  }
-
-  adminClientesList.innerHTML = "";
-  data.forEach((cli) => {
-    const card = document.createElement("div");
-    card.className = "cliente-card";
-
-    card.innerHTML = `
-      <div class="cliente-card-main">
-        <strong>${cli.nome || "Sem nome"}</strong>
-        <span>${cli.email || ""}</span>
-        <span>${cli.telefone || ""}</span>
-      </div>
-      <button class="btn-secondary btn-small">Gerenciar</button>
-    `;
-
-    const btn = card.querySelector("button");
-    btn.addEventListener("click", () => {
-      abrirDetalheCliente(cli);
-    });
-
-    adminClientesList.appendChild(card);
-  });
-}
-
-async function abrirDetalheCliente(cli) {
-  clienteSelecionado = cli;
-  orcamentoAtual = null;
-
-  if (!adminClienteDetalhe) return;
-
-  adminClienteDetalhe.classList.remove("hidden");
-
-  if (clienteNomeTitulo) {
-    clienteNomeTitulo.textContent = cli.nome || "Cliente sem nome";
-  }
-
-  if (clienteInfoBasica) {
-    const linhas = [];
-    if (cli.email) linhas.push("E-mail: " + cli.email);
-    if (cli.telefone) linhas.push("Telefone: " + cli.telefone);
-    if (cli.data_evento) linhas.push("Data do evento: " + cli.data_evento);
-    if (cli.endereco_evento) linhas.push("Local: " + cli.endereco_evento);
-
-    clienteInfoBasica.textContent = linhas.join(" • ");
-  }
-
-  if (documentosStatus) {
-    documentosStatus.textContent = "";
-    documentosStatus.className = "status";
-  }
-
-  // reset padrão da forma de pagamento
-  if (formaQtdInput) formaQtdInput.value = "1";
-  if (parcelasContainer) parcelasContainer.innerHTML = "";
-  if (formaPreview) {
-    formaPreview.textContent =
-      "Selecione o número de parcelas; depois defina a forma e a data de cada uma.";
-  }
-
-  buildParcelasUI();
-  await loadOrcamentoCliente(cli.id);
-}
-
-async function loadOrcamentoCliente(clienteId) {
-  const { data, error } = await supabase
-    .from("orcamentos")
-    .select(
-      "id, valor_total, forma_pagamento, contrato_pdf_url, orcamento_pdf_url"
-    )
-    .eq("cliente_id", clienteId)
-    .order("id", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error && error.code !== "PGRST116") {
-    console.error("Erro ao carregar orçamento:", error);
-  }
-
-  orcamentoAtual = data || null;
-
-  if (orcamentoAtual && formaPreview) {
-    formaPreview.textContent = orcamentoAtual.forma_pagamento
-      ? `Forma atual: ${orcamentoAtual.forma_pagamento}`
-      : "Forma de pagamento ainda não informada.";
-  }
-}
-
-// ===== Forma de pagamento parcelada (1ª Pix, 2ª Cartão, etc.) =====
-function buildParcelasUI() {
-  if (!parcelasContainer || !formaQtdInput) return;
-
-  const qtd = parseInt(formaQtdInput.value || "0", 10);
-  parcelasContainer.innerHTML = "";
-
-  if (!qtd || qtd <= 0) {
-    if (formaPreview) {
-      formaPreview.textContent =
-        "Selecione o número de parcelas; depois escolha a forma e a data de cada uma.";
-    }
-    return;
-  }
-
-  for (let i = 1; i <= qtd; i++) {
-    const row = document.createElement("div");
-    row.className = "form-row parcela-row";
-
-    row.innerHTML = `
-      <label style="font-weight:600; margin-bottom:4px;">Parcela ${i}</label>
-      <div class="form-row">
-        <select class="parcela-tipo">
-          <option value="">Meio de pagamento...</option>
-          <option value="Pix">Pix</option>
-          <option value="Boleto">Boleto</option>
-          <option value="Cartão">Cartão</option>
-        </select>
-      </div>
-      <div class="form-row">
-        <input type="date" class="parcela-data" />
-      </div>
-    `;
-
-    parcelasContainer.appendChild(row);
-  }
-
-  parcelasContainer
-    .querySelectorAll("select, input")
-    .forEach((el) => el.addEventListener("change", updateFormaPreview));
-
-  updateFormaPreview();
-}
-
-function getFormaPagamentoTexto() {
-  if (!formaQtdInput || !parcelasContainer) return "";
-
-  const qtd = parseInt(formaQtdInput.value || "0", 10);
-  if (!qtd || qtd <= 0) return "";
-
-  const rows = parcelasContainer.querySelectorAll(".parcela-row");
-  const partes = [];
-
-  rows.forEach((row, idx) => {
-    const tipoEl = row.querySelector(".parcela-tipo");
-    const dataEl = row.querySelector(".parcela-data");
-
-    const tipo = tipoEl && tipoEl.value;
-    const data = dataEl && dataEl.value;
-
-    if (!tipo || !data) return;
-
-    const [ano, mes, dia] = data.split("-");
-    const dataBr = `${dia}/${mes}/${ano}`;
-    const num = idx + 1;
-
-    partes.push(`${num}ª parcela: ${tipo} - ${dataBr}`);
-  });
-
-  if (partes.length === 0) return "";
-
-  return partes.join(" | ");
-}
-
-function updateFormaPreview() {
-  if (!formaPreview) return;
-  const txt = getFormaPagamentoTexto();
-  formaPreview.textContent = txt
-    ? `Forma de pagamento definida: ${txt}`
-    : "Selecione a forma e a data de cada parcela.";
-}
-
-if (formaQtdInput) {
-  formaQtdInput.addEventListener("change", buildParcelasUI);
-}
-
-// ===== Parcelas: gravação na tabela "parcelas" =====
-async function salvarParcelas(orcamentoId, clienteId) {
-  if (!parcelasContainer || !formaQtdInput) return;
-
-  const rows = parcelasContainer.querySelectorAll(".parcela-row");
-  const payload = [];
-
-  rows.forEach((row, idx) => {
-    const tipoEl = row.querySelector(".parcela-tipo");
-    const dataEl = row.querySelector(".parcela-data");
-
-    const tipo = tipoEl?.value;
-    const data = dataEl?.value; // AAAA-MM-DD
-
-    if (!tipo || !data) return; // ignora linhas incompletas
-
-    payload.push({
-      orcamento_id: orcamentoId,
-      cliente_id: clienteId,
-      numero: idx + 1,
-      tipo,
-      data_venc: data,
-      status: "aberta",
-    });
-  });
-
-  // Remove parcelas antigas desse orçamento e recria
-  await supabase.from("parcelas").delete().eq("orcamento_id", orcamentoId);
-
-  if (!payload.length) return;
-
-  const { error } = await supabase.from("parcelas").insert(payload);
-  if (error) {
-    console.error("Erro ao salvar parcelas:", error);
-  }
-}
-
-// ===== formulário de documentos (contrato, orçamento, forma de pagamento) =====
-if (formDocumentos) {
-  formDocumentos.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (!clienteSelecionado || !documentosStatus) return;
-
-    documentosStatus.textContent = "Salvando documentos...";
-    documentosStatus.className = "status";
-
-    const formaTexto = getFormaPagamentoTexto();
-
-    let orc = orcamentoAtual;
-    if (!orc) {
-      const { data, error } = await supabase
-        .from("orcamentos")
-        .insert({
-          cliente_id: clienteSelecionado.id,
-          email: clienteSelecionado.email || null,
-          valor_total: null,
-          forma_pagamento: formaTexto || null,
-          status: "aprovado",
-        })
-        .select("id, forma_pagamento")
-        .single();
-
-      if (error) {
-        console.error("Erro ao criar orçamento:", error);
-        documentosStatus.textContent =
-          "Erro ao criar orçamento: " + error.message;
-        documentosStatus.className = "status error";
-        return;
-      }
-      orc = data;
-      orcamentoAtual = orc;
-    } else {
-      await supabase
-        .from("orcamentos")
-        .update({ forma_pagamento: formaTexto || null })
-        .eq("id", orc.id);
-    }
-
-    // Salva/atualiza parcelas na tabela "parcelas"
-    try {
-      await salvarParcelas(orc.id, clienteSelecionado.id);
-    } catch (err) {
-      console.error("Erro ao salvar parcelas:", err);
-    }
-
-    const atualizacoes = {};
-
-    // Upload orçamento aprovado
-    if (orcamentoPdfInput && orcamentoPdfInput.files[0]) {
-      const file = orcamentoPdfInput.files[0];
-      const path = `${clienteSelecionado.id}/orcamento-${Date.now()}.pdf`;
-
-      const { error: upErr } = await supabase.storage
-        .from("documentos")
-        .upload(path, file, { upsert: true });
-
-      if (upErr) {
-        console.error("Erro ao enviar orçamento PDF:", upErr);
-      } else {
-        const { data: pub } = supabase.storage
-          .from("documentos")
-          .getPublicUrl(path);
-        atualizacoes.orcamento_pdf_url = pub.publicUrl;
-      }
-    }
-
-    // Upload contrato assinado
-    if (contratoPdfInput && contratoPdfInput.files[0]) {
-      const file = contratoPdfInput.files[0];
-      const path = `${clienteSelecionado.id}/contrato-${Date.now()}.pdf`;
-
-      const { error: upErr } = await supabase.storage
-        .from("documentos")
-        .upload(path, file, { upsert: true });
-
-      if (upErr) {
-        console.error("Erro ao enviar contrato PDF:", upErr);
-      } else {
-        const { data: pub } = supabase.storage
-          .from("documentos")
-          .getPublicUrl(path);
-        atualizacoes.contrato_pdf_url = pub.publicUrl;
-      }
-    }
-
-    atualizacoes.forma_pagamento = formaTexto || null;
-
-    const { error: updErr } = await supabase
-      .from("orcamentos")
-      .update(atualizacoes)
-      .eq("id", orc.id);
-
-    if (updErr) {
-      console.error("Erro ao salvar dados:", updErr);
-      documentosStatus.textContent =
-        "Erro ao salvar dados: " + updErr.message;
-      documentosStatus.className = "status error";
-      return;
-    }
-
-    if (orcamentoPdfInput) orcamentoPdfInput.value = "";
-    if (contratoPdfInput) contratoPdfInput.value = "";
-
-    documentosStatus.textContent = "Dados salvos na conta da cliente.";
-    documentosStatus.className = "status ok";
-  });
-}
-
-// botão de redefinição de senha
-if (btnResetSenha) {
-  btnResetSenha.addEventListener("click", async () => {
-    if (!clienteSelecionado || !clienteSelecionado.email) {
-      alert("Selecione uma cliente que tenha e-mail cadastrado.");
-      return;
-    }
-
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(
-        clienteSelecionado.email,
-        {
-          redirectTo: window.location.origin + "/cliente.html",
-        }
-      );
-
-      if (error) {
-        console.error("Erro ao enviar reset de senha:", error);
-        alert("Erro ao enviar e-mail de redefinição de senha.");
-        return;
-      }
-
-      alert(
-        "E-mail de redefinição de senha enviado para " +
-          clienteSelecionado.email
-      );
-    } catch (e) {
-      console.error(e);
-      alert("Erro inesperado ao enviar e-mail de redefinição.");
-    }
-  });
-}
-
-// ===== Resumo das parcelas na área do cliente (com base no texto) =====
+// ===== Resumo das parcelas na área do cliente (com base no texto do orçamento) =====
 function renderPagamentosResumo(orc) {
   if (!clientPagamentosList) return;
 
@@ -970,7 +385,7 @@ function renderPagamentosResumo(orc) {
   card.innerHTML = `
     <div class="decor-tag">Resumo das parcelas</div>
     <div class="decor-title">${partes.length} parcela(s) combinadas</div>
-  `;
+  ";
 
   const ul = document.createElement("ul");
   ul.style.marginTop = "8px";
@@ -986,6 +401,67 @@ function renderPagamentosResumo(orc) {
 
   card.appendChild(ul);
   clientPagamentosList.appendChild(card);
+}
+
+// ===== Parcelas detalhadas (tabela parcelas) para o cliente =====
+async function loadClientParcelas(clienteId) {
+  if (!clientPagamentosList) return;
+
+  const { data, error } = await supabase
+    .from("parcelas")
+    .select("numero, tipo, data_venc, status")
+    .eq("cliente_id", clienteId)
+    .order("data_venc", { ascending: true });
+
+  if (error) {
+    console.error("Erro ao carregar parcelas do cliente:", error);
+    const msg = document.createElement("p");
+    msg.className = "status error";
+    msg.textContent = "Erro ao carregar as parcelas.";
+    clientPagamentosList.appendChild(msg);
+    return;
+  }
+
+  if (!data || !data.length) {
+    const msg = document.createElement("p");
+    msg.className = "hint";
+    msg.textContent =
+      "Ainda não há parcelas registradas individualmente. A equipe Lorentz pode atualizar isso pelo app ADM.";
+    clientPagamentosList.appendChild(msg);
+    return;
+  }
+
+  const list = document.createElement("div");
+  list.style.marginTop = "10px";
+  list.style.display = "flex";
+  list.style.flexDirection = "column";
+  list.style.gap = "6px";
+
+  data.forEach((parc) => {
+    const row = document.createElement("div");
+    row.style.display = "flex";
+    row.style.justifyContent = "space-between";
+    row.style.fontSize = "0.8rem";
+
+    let dataBr = parc.data_venc;
+    try {
+      if (parc.data_venc) {
+        dataBr = new Date(parc.data_venc).toLocaleDateString("pt-BR");
+      }
+    } catch (_) {
+      /* mantém valor original em caso de erro */
+    }
+
+    const statusLabel = parc.status || "aberta";
+
+    row.innerHTML = `
+      <span>${parc.numero}ª parcela - ${parc.tipo || "Meio de pagamento"} - vencimento ${dataBr}</span>
+      <span>${statusLabel}</span>
+    `;
+    list.appendChild(row);
+  });
+
+  clientPagamentosList.appendChild(list);
 }
 
 // ===== Área do cliente: carregar orçamentos / contratos para o usuário logado =====
@@ -1103,19 +579,25 @@ async function loadClientOrcamentosForUser(user) {
   });
 
   // Usa o orçamento mais recente para montar o resumo de parcelas
-  renderPagamentosResumo(primeiro);
-  // Carrega parcelas detalhadas e status para o cliente
-  const clientIdForParcels = cliente?.id || primeiro.cliente_id;
-  if (clientIdForParcels) {
-    await loadClientParcelas(clientIdForParcels);
+  if (clientPagamentosList) {
+    renderPagamentosResumo(primeiro);
+    const clientIdForParcels = cliente?.id || primeiro.cliente_id;
+    if (clientIdForParcels) {
+      await loadClientParcelas(clientIdForParcels);
+    }
   }
 }
 
 // ===== Inicialização =====
 (async () => {
-  const { data } = await supabase.auth.getSession();
-  const user = data?.session?.user ?? null;
-  await handleSession(user);
+  try {
+    const { data } = await supabase.auth.getSession();
+    const user = data?.session?.user ?? null;
+    await handleSession(user);
+  } catch (e) {
+    console.error("Erro ao recuperar sessão:", e);
+    setLoggedOutUI();
+  }
 
   await loadCatalog("todos");
 })();

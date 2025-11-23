@@ -1,7 +1,7 @@
 /*
   Estilos principais do portal Lorentz. Inspirado em paletas claras com
   detalhes em dourado e rose, criando um visual elegante para noivas e
-  eventos. Ajuste as variáveis em :root para customizar o tema.
+  eventos.
 */
 
 :root {
@@ -57,17 +57,12 @@ html, body {
   align-items: center;
   gap: 8px;
 }
-.brand-logo {
-  width: 40px;
-  height: 40px;
+.brand-logo-img {
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  background: var(--accent-rose);
-  color: #fff;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7);
 }
 .brand-text {
   display: flex;
@@ -261,7 +256,6 @@ html, body {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.07);
 }
 .card-side {
-  /* o grid já ajusta proporção, então mantemos igual ao card */
 }
 .card-header {
   margin-bottom: 12px;
@@ -367,6 +361,11 @@ h2 {
   flex-direction: column;
   gap: 4px;
 }
+.form-row.two-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
 .form-row label {
   font-size: 0.75rem;
   color: var(--muted);
@@ -399,7 +398,7 @@ h2 {
   color: #27ae60;
 }
 
-/* Lista de orçamentos (placeholder por enquanto) */
+/* Lista de orçamentos */
 .orcamentos-list {
   margin-top: 10px;
   display: flex;
@@ -509,100 +508,3 @@ h2 {
 .hidden {
   display: none !important;
 }
-
-.clientes-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
-  max-height: 260px;
-  overflow-y: auto;
-}
-
-.cliente-card {
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: #fff;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-}
-
-.cliente-card-main {
-  display: flex;
-  flex-direction: column;
-}
-
-.cliente-card-main strong {
-  font-size: 13px;
-}
-
-.cliente-card-main span {
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.btn-small {
-  padding: 4px 10px;
-  font-size: 12px;
-}
-
-.cliente-detalhe {
-  margin-top: 14px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-}
-
-/* Agenda and Finance styles */
-.agenda-list,
-.finance-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.agenda-item,
-.finance-item {
-  background: var(--card2);
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-}
-
-.agenda-main,
-.finance-main {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.agenda-location,
-.agenda-contact,
-.finance-info {
-  font-size: 0.85rem;
-  color: var(--muted);
-  margin-bottom: 4px;
-}
-
-.finance-summary {
-  margin-top: 8px;
-  margin-bottom: 8px;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.finance-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.finance-item .btn-small {
-  margin-top: 8px;
-}
-
