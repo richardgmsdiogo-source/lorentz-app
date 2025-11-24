@@ -1,35 +1,30 @@
 // app.js
 // Portal Lorentz – Área do Cliente + Cadastro de Interessados
-// Funciona em qualquer página, mas só ativa o que existir no HTML atual.
 
 import { supabase } from "./config.js";
 
-// ============================================================================
-// Seleção de elementos (podem ser null em algumas páginas)
-// ============================================================================
+// ---------------------------------------------------------------------------
+// Seleção de elementos
+// ---------------------------------------------------------------------------
 
-// Header / sessão
 const headerSessionText = document.getElementById("header-session-text");
 const headerRole = document.getElementById("header-role");
 const btnLogout = document.getElementById("btn-logout");
 
-// Login e painel do cliente
 const loginSection = document.getElementById("login-section");
 const clientSection = document.getElementById("client-section");
 const loginForm = document.getElementById("login-form");
 const loginStatus = document.getElementById("login-status");
 
-// Cadastro de cliente (visitante)
 const clienteCadastroForm = document.getElementById("cliente-cadastro-form");
 const clienteCadastroStatus = document.getElementById("cliente-cadastro-status");
 
-// Painel do cliente: orçamentos e pagamentos
 const clientOrcamentosList = document.getElementById("client-orcamentos");
 const clientPagamentosList = document.getElementById("client-pagamentos");
 
-// ============================================================================
+// ---------------------------------------------------------------------------
 // Helpers de UI
-// ============================================================================
+// ---------------------------------------------------------------------------
 
 function setStatus(el, message, type = "info") {
   if (!el) return;
@@ -52,7 +47,7 @@ function hideElement(el) {
 
 function formatCurrency(valor) {
   if (valor == null || isNaN(valor)) return "-";
-  return valor.toLocaleString("pt-BR", {
+  return Number(valor).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
@@ -65,23 +60,21 @@ function formatDate(dateStr) {
   return d.toLocaleDateString("pt-BR");
 }
 
-// ============================================================================
-// Controle de sessão (logado / deslogado)
-// ============================================================================
+// ---------------------------------------------------------------------------
+// Estado de sessão
+// ---------------------------------------------------------------------------
 
 function aplicarEstadoDeslogado() {
   if (headerSessionText) headerSessionText.textContent = "Visitante";
   if (headerRole) {
     headerRole.textContent = "";
-    hideElement(headerRole);
+    headerRole.classList.add("hidden");
   }
-  hideElement(btnLogout);
+  if (btnLogout) btnLogout.classList.add("hidden");
 
-  // Mostra login/cadastro, esconde painel
   showElement(loginSection);
   hideElement(clientSection);
 
-  // Limpa status
   setStatus(loginStatus, "");
 }
 
@@ -96,51 +89,70 @@ function aplicarEstadoLogado(user, cliente) {
 
   if (headerRole) {
     headerRole.textContent = "Cliente";
-    showElement(headerRole);
+    headerRole.classList.remove("hidden");
   }
 
-  showElement(btnLogout);
+  if (btnLogout) btnLogout.classList.remove("hidden");
 
-  // Esconde login/cadastro, mostra painel
   hideElement(loginSection);
   showElement(clientSection);
 }
 
-// ============================================================================
-// Supabase – buscas de dados
-// ============================================================================
+// ---------------------------------------------------------------------------
+// Buscar cliente (corrigido: tenta por user_id e por email)
+// ---------------------------------------------------------------------------
 
-// Busca o registro do cliente vinculado ao usuário logado (tabela `clientes`)
-async function buscarClientePorUserId(userId) {
+async function buscarCliente(user) {
+  // 1) Tenta por user_id, se a coluna existir e estiver preenchida
   try {
     const { data, error } = await supabase
-      .from("clientes") // 🔧 se o nome da tabela for outro, ajuste aqui
+      .from("clientes")
       .select("*")
-      .eq("user_id", userId)
+      .eq("user_id", user.id)
       .maybeSingle();
 
-    if (error && error.code !== "PGRST116") {
-      console.error("[CLIENTE] Erro ao buscar cliente:", error);
+    if (!error && data) {
+      return data;
+    }
+
+    // Se a coluna não existir ou não achou nada, cai pro fallback
+  } catch (err) {
+    console.warn("[CLIENTE] Erro buscando por user_id, tentando por email:", err);
+  }
+
+  // 2) Fallback: tenta encontrar pelo email (se existir coluna email)
+  try {
+    const { data, error } = await supabase
+      .from("clientes")
+      .select("*")
+      .eq("email", user.email)
+      .maybeSingle();
+
+    if (error) {
+      console.warn("[CLIENTE] Erro buscando cliente por email:", error);
       return null;
     }
 
     return data || null;
   } catch (err) {
-    console.error("[CLIENTE] Erro inesperado ao buscar cliente:", err);
+    console.error("[CLIENTE] Erro inesperado buscando cliente por email:", err);
     return null;
   }
 }
 
-// Carrega orçamentos do cliente (tabela `orcamentos`)
+// ---------------------------------------------------------------------------
+// Orçamentos – buscados por cliente_id
+// ---------------------------------------------------------------------------
+
 async function carregarOrcamentos(clienteId) {
-  if (!clientOrcamentosList) return;
+  if (!clientOrcamentosList) return { orcamentos: [], ids: [] };
 
   clientOrcamentosList.innerHTML =
     '<p class="hint">Carregando informações do seu evento...</p>';
 
   try {
     const { data, error } = await supabase
-      .from("orcamentos") // 🔧 ajuste se o nome for outro
+      .from("orcamentos")
       .select("*")
       .eq("cliente_id", clienteId)
       .order("created_at", { ascending: false });
@@ -156,12 +168,12 @@ async function carregarOrcamentos(clienteId) {
 
     if (!orcamentos.length) {
       clientOrcamentosList.innerHTML =
-        '<p class="hint">Ainda não há orçamento aprovado para este cliente.</p>';
+        '<p class="hint">Ainda não há orçamento cadastrado para este cliente.</p>';
       return { orcamentos, ids: [] };
     }
 
-    const ids = orcamentos.map((o) => o.id);
     renderizarOrcamentos(orcamentos);
+    const ids = orcamentos.map((o) => o.id);
     return { orcamentos, ids };
   } catch (err) {
     console.error("[CLIENTE] Erro inesperado ao carregar orçamentos:", err);
@@ -173,7 +185,6 @@ async function carregarOrcamentos(clienteId) {
 
 function renderizarOrcamentos(orcamentos) {
   if (!clientOrcamentosList) return;
-
   clientOrcamentosList.innerHTML = "";
 
   orcamentos.forEach((orc) => {
@@ -188,11 +199,20 @@ function renderizarOrcamentos(orcamentos) {
     const valorTotal = formatCurrency(orc.valor_total || orc.valor || 0);
     const status = orc.status || "Em análise";
 
-    // URLs dos PDFs – ajuste os nomes das colunas conforme seu banco
+    // Tentativa de descobrir colunas possíveis com o link do PDF
     const urlOrcamento =
-      orc.orcamento_pdf_url || orc.url_pdf_orcamento || orc.link_orcamento;
+      orc.orcamento_pdf_url ||
+      orc.url_pdf_orcamento ||
+      orc.orcamento_url ||
+      orc.orcamento_path ||
+      null;
+
     const urlContrato =
-      orc.contrato_pdf_url || orc.url_pdf_contrato || orc.link_contrato;
+      orc.contrato_pdf_url ||
+      orc.url_pdf_contrato ||
+      orc.contrato_url ||
+      orc.contrato_path ||
+      null;
 
     wrapper.innerHTML = `
       <h4>${titulo}</h4>
@@ -218,28 +238,25 @@ function renderizarOrcamentos(orcamentos) {
   });
 }
 
-// Carrega parcelas/pagamentos (tabela `parcelas`)
-async function carregarPagamentos(orcamentoIds) {
-  if (!clientPagamentosList) return;
+// ---------------------------------------------------------------------------
+// Pagamentos – AGORA por cliente_id (usando sua tabela parcelas)
+// ---------------------------------------------------------------------------
 
-  if (!orcamentoIds || !orcamentoIds.length) {
-    clientPagamentosList.innerHTML =
-      '<p class="hint">Ainda não há forma de pagamento cadastrada para o seu orçamento.</p>';
-    return;
-  }
+async function carregarPagamentos(clienteId) {
+  if (!clientPagamentosList) return;
 
   clientPagamentosList.innerHTML =
     '<p class="hint">Carregando informações de pagamento...</p>';
 
   try {
     const { data, error } = await supabase
-      .from("parcelas") // 🔧 ajuste se o nome for outro
+      .from("parcelas")
       .select("*")
-      .in("orcamento_id", orcamentoIds)
-      .order("vencimento", { ascending: true });
+      .eq("cliente_id", clienteId)
+      .order("data_venc", { ascending: true });
 
     if (error) {
-      console.error("[CLIENTE] Erro ao carregar pagamentos:", error);
+      console.error("[CLIENTE] Erro ao carregar parcelas:", error);
       clientPagamentosList.innerHTML =
         '<p class="hint status-error">Não foi possível carregar as parcelas.</p>';
       return;
@@ -248,7 +265,7 @@ async function carregarPagamentos(orcamentoIds) {
     const parcelas = data || [];
     renderizarPagamentos(parcelas);
   } catch (err) {
-    console.error("[CLIENTE] Erro inesperado ao carregar pagamentos:", err);
+    console.error("[CLIENTE] Erro inesperado ao carregar parcelas:", err);
     clientPagamentosList.innerHTML =
       '<p class="hint status-error">Erro inesperado ao carregar parcelas.</p>';
   }
@@ -272,7 +289,7 @@ function renderizarPagamentos(parcelas) {
       <th>Parcela</th>
       <th>Vencimento</th>
       <th>Valor</th>
-      <th>Forma</th>
+      <th>Tipo</th>
       <th>Status</th>
     </tr>
   `;
@@ -282,18 +299,17 @@ function renderizarPagamentos(parcelas) {
   parcelas.forEach((p) => {
     const tr = document.createElement("tr");
 
-    const numero =
-      p.numero_parcela || p.parcela || p.n_parcela || p.id || "-";
-    const venc = formatDate(p.vencimento || p.data_vencimento);
-    const valor = formatCurrency(p.valor || p.valor_parcela);
-    const forma = p.forma_pagamento || p.meio_pagamento || "-";
-    const status = p.status_pagamento || p.status || "A vencer";
+    const numero = p.numero ?? "-";
+    const venc = formatDate(p.data_venc);
+    const valor = formatCurrency(p.valor);
+    const tipo = p.tipo || "-";
+    const status = p.status || "aberta";
 
     tr.innerHTML = `
       <td>${numero}</td>
       <td>${venc}</td>
       <td>${valor}</td>
-      <td>${forma}</td>
+      <td>${tipo}</td>
       <td>${status}</td>
     `;
 
@@ -307,9 +323,12 @@ function renderizarPagamentos(parcelas) {
   clientPagamentosList.appendChild(table);
 }
 
-// Carrega tudo do painel do cliente (cliente + orçamentos + pagamentos)
+// ---------------------------------------------------------------------------
+// Carregar painel completo do cliente
+// ---------------------------------------------------------------------------
+
 async function carregarPainelCliente(user) {
-  const cliente = await buscarClientePorUserId(user.id);
+  const cliente = await buscarCliente(user);
 
   aplicarEstadoLogado(user, cliente);
 
@@ -325,13 +344,13 @@ async function carregarPainelCliente(user) {
     return;
   }
 
-  const { ids: orcamentoIds } = await carregarOrcamentos(cliente.id);
-  await carregarPagamentos(orcamentoIds);
+  await carregarOrcamentos(cliente.id);
+  await carregarPagamentos(cliente.id);
 }
 
-// ============================================================================
+// ---------------------------------------------------------------------------
 // Autenticação – login / logout
-// ============================================================================
+// ---------------------------------------------------------------------------
 
 async function checarSessaoInicial() {
   try {
@@ -342,8 +361,7 @@ async function checarSessaoInicial() {
       return;
     }
 
-    const user = data.user;
-    await carregarPainelCliente(user);
+    await carregarPainelCliente(data.user);
   } catch (err) {
     console.error("[CLIENTE] Erro ao checar sessão inicial:", err);
     aplicarEstadoDeslogado();
@@ -397,9 +415,9 @@ async function fazerLogout() {
   }
 }
 
-// ============================================================================
-// Cadastro de cliente (visitante) – NÃO cria usuário de login, só registro
-// ============================================================================
+// ---------------------------------------------------------------------------
+// Cadastro de visitante
+// ---------------------------------------------------------------------------
 
 async function cadastrarClienteVisitante(payload) {
   try {
@@ -436,24 +454,24 @@ async function cadastrarClienteVisitante(payload) {
   }
 }
 
-// ============================================================================
-// Eventos de formulário / botões
-// ============================================================================
+// ---------------------------------------------------------------------------
+// Eventos
+// ---------------------------------------------------------------------------
 
 function registrarEventos() {
-  // Login
   if (loginForm) {
     loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
 
-      const emailInput = document.getElementById("email");
-      const passwordInput = document.getElementById("password");
-
-      const email = emailInput?.value?.trim();
-      const password = passwordInput?.value || "";
+      const email = document.getElementById("email")?.value.trim();
+      const password = document.getElementById("password")?.value || "";
 
       if (!email || !password) {
-        setStatus(loginStatus, "Informe e-mail e senha para entrar.", "error");
+        setStatus(
+          loginStatus,
+          "Informe e-mail e senha para entrar.",
+          "error"
+        );
         return;
       }
 
@@ -461,14 +479,12 @@ function registrarEventos() {
     });
   }
 
-  // Logout
   if (btnLogout) {
     btnLogout.addEventListener("click", async () => {
       await fazerLogout();
     });
   }
 
-  // Cadastro de visitante
   if (clienteCadastroForm) {
     clienteCadastroForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -503,7 +519,6 @@ function registrarEventos() {
         return;
       }
 
-      // Se existir usuário logado, vincula esse cadastro ao user_id
       let userId = null;
       try {
         const { data } = await supabase.auth.getUser();
@@ -523,28 +538,24 @@ function registrarEventos() {
         hora_evento: horaEvento || null,
         endereco_residencial: enderecoResid || null,
         endereco_evento: enderecoEvento || null,
-        origem_cadastro: "site_cliente", // opcional, útil pro ADM
+        origem_cadastro: "site_cliente",
       };
 
       if (userId) {
-        payload.user_id = userId; // 🔧 exige coluna user_id em `clientes`
+        payload.user_id = userId;
       }
 
       await cadastrarClienteVisitante(payload);
-
-      // Não limpar tudo pra pessoa ainda ver o que preencheu,
-      // mas se quiser, descomente:
-      // clienteCadastroForm.reset();
     });
   }
 }
 
-// ============================================================================
+// ---------------------------------------------------------------------------
 // Inicialização
-// ============================================================================
+// ---------------------------------------------------------------------------
 
 async function init() {
-  aplicarEstadoDeslogado(); // estado padrão
+  aplicarEstadoDeslogado();
   registrarEventos();
   await checarSessaoInicial();
 }
