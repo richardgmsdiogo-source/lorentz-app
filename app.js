@@ -1,358 +1,332 @@
-// app.js
-// Portal Lorentz – Área do Cliente + Cadastro de Interessados
-// Funciona em qualquer página, mas só ativa o que existir no HTML atual.
+// Código principal do portal Lorentz (versão somente catálogo + área do cliente).
+// Agora o acesso ADM é feito apenas pelo app interno; o site foca no portfólio
+// e na experiência da cliente.
 
 import { supabase } from "./config.js";
 
-// ============================================================================
-// Seleção de elementos (podem ser null em algumas páginas)
-// ============================================================================
+// ===== Seleção de elementos (podem ser null em algumas páginas) =====
 
-// Header / sessão
+// Catálogo
+const catalogoGrid = document.getElementById("catalogo-grid");
+const catalogTabs = document.querySelectorAll(".catalog-tab");
+
+// Login / sessão (área do cliente)
+const loginForm = document.getElementById("login-form");
+const loginStatus = document.getElementById("login-status");
+
+const loginSection = document.getElementById("login-section");
+const clientSection = document.getElementById("client-section");
+
+// Header
 const headerSessionText = document.getElementById("header-session-text");
 const headerRole = document.getElementById("header-role");
 const btnLogout = document.getElementById("btn-logout");
 
-// Login e painel do cliente
-const loginSection = document.getElementById("login-section");
-const clientSection = document.getElementById("client-section");
-const loginForm = document.getElementById("login-form");
-const loginStatus = document.getElementById("login-status");
-
-// Cadastro de cliente (visitante)
-const clienteCadastroForm = document.getElementById("cliente-cadastro-form");
-const clienteCadastroStatus = document.getElementById("cliente-cadastro-status");
-
-// Painel do cliente: orçamentos e pagamentos
+// Área do cliente (painel do usuário)
 const clientOrcamentosList = document.getElementById("client-orcamentos");
 const clientPagamentosList = document.getElementById("client-pagamentos");
 
-// ============================================================================
-// Helpers de UI
-// ============================================================================
+// Cadastro de clientes (visitante)
+const clienteCadastroForm = document.getElementById("cliente-cadastro-form");
+const clienteCadastroStatus = document.getElementById("cliente-cadastro-status");
 
-function setStatus(el, message, type = "info") {
-  if (!el) return;
-  el.textContent = message || "";
-  el.classList.remove("status-error", "status-success", "status-info");
-  if (type === "error") el.classList.add("status-error");
-  else if (type === "success") el.classList.add("status-success");
-  else el.classList.add("status-info");
-}
+// Modal do catálogo (usado em catalogo.html)
+const decorModal = document.getElementById("decor-modal");
+const decorModalClose = document.getElementById("decor-modal-close");
+const decorModalContent = document.getElementById("decor-modal-content");
 
-function showElement(el) {
-  if (!el) return;
-  el.classList.remove("hidden");
-}
+// ===== UI de sessão =====
+function setLoggedOutUI() {
+  if (loginSection) loginSection.classList.remove("hidden");
+  if (clientSection) clientSection.classList.add("hidden");
 
-function hideElement(el) {
-  if (!el) return;
-  el.classList.add("hidden");
-}
-
-function formatCurrency(valor) {
-  if (valor == null || isNaN(valor)) return "-";
-  return valor.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("pt-BR");
-}
-
-// ============================================================================
-// Controle de sessão (logado / deslogado)
-// ============================================================================
-
-function aplicarEstadoDeslogado() {
   if (headerSessionText) headerSessionText.textContent = "Visitante";
+  if (headerRole) headerRole.classList.add("hidden");
+  if (btnLogout) btnLogout.classList.add("hidden");
+}
+
+function setClientUI(name) {
+  if (loginSection) loginSection.classList.add("hidden");
+  if (clientSection) clientSection.classList.remove("hidden");
+
+  if (headerSessionText) headerSessionText.textContent = name || "Cliente";
   if (headerRole) {
-    headerRole.textContent = "";
-    hideElement(headerRole);
+    headerRole.textContent = "CLIENTE";
+    headerRole.classList.remove("hidden");
   }
-  hideElement(btnLogout);
-
-  // Mostra login/cadastro, esconde painel
-  showElement(loginSection);
-  hideElement(clientSection);
-
-  // Limpa status
-  setStatus(loginStatus, "");
+  if (btnLogout) btnLogout.classList.remove("hidden");
 }
 
-function aplicarEstadoLogado(user, cliente) {
-  const nome =
-    cliente?.nome_contratante ||
-    cliente?.nome ||
-    user.email ||
-    "Cliente Lorentz";
-
-  if (headerSessionText) headerSessionText.textContent = nome;
-
-  if (headerRole) {
-    headerRole.textContent = "Cliente";
-    showElement(headerRole);
+async function handleSession(user) {
+  if (!user) {
+    setLoggedOutUI();
+    return;
   }
 
-  showElement(btnLogout);
+  // Busca apenas o nome no profile (role agora é usada só no app ADM)
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("name")
+    .eq("id", user.id)
+    .maybeSingle();
 
-  // Esconde login/cadastro, mostra painel
-  hideElement(loginSection);
-  showElement(clientSection);
+  if (error) {
+    console.error("Erro ao carregar profile:", error);
+  }
+
+  const name = profile?.name || user.email;
+  setClientUI(name);
+  await loadClientOrcamentosForUser(user);
 }
 
-// ============================================================================
-// Supabase – buscas de dados
-// ============================================================================
+// ===== Cadastro de clientes (visitante) =====
 
-// Busca o registro do cliente vinculado ao usuário logado (tabela `clientes`)
-async function buscarClientePorUserId(userId) {
-  try {
-    const { data, error } = await supabase
-      .from("clientes") // 🔧 se o nome da tabela for outro, ajuste aqui
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
+function buildClientePayload(prefix) {
+  const get = (id) => {
+    const el = document.getElementById(prefix + id);
+    return el ? el.value.trim() : "";
+  };
 
-    if (error && error.code !== "PGRST116") {
-      console.error("[CLIENTE] Erro ao buscar cliente:", error);
-      return null;
+  const nomeContratante = get("nome-contratante");
+  const nomeNoivos = get("nome-noivos");
+  const email = get("email");
+  const telefone = get("telefone");
+  const telefoneWhats = get("telefone-whatsapp");
+  const cpf = get("cpf");
+  const dataEvento = get("data-evento");
+  const horaEvento = get("hora-evento");
+  const endResidencial = get("endereco-residencial");
+  const endEvento = get("endereco-evento");
+
+  return {
+    nome_contratante: nomeContratante || null,
+    nome_noivos: nomeNoivos || null,
+    email: email || null,
+    telefone: telefone || null,
+    telefone_whatsapp: telefoneWhats || telefone || null,
+    cpf: cpf || null,
+    documento: cpf || null,              // espelha CPF em documento
+    data_evento: dataEvento || null,
+    hora_evento: horaEvento || null,
+    horario_evento: horaEvento || null,  // espelho, se existir essa coluna
+    endereco_residencial: endResidencial || null,
+    endereco_evento: endEvento || null,
+    nome: nomeContratante || null        // espelha contratante em nome
+  };
+}
+
+async function inserirCliente(payload, statusEl) {
+  if (!statusEl) statusEl = { textContent: "", className: "" };
+
+  if (!payload.nome_contratante || !payload.email || !payload.telefone) {
+    statusEl.textContent =
+      "Preencha pelo menos nome do contratante, telefone e e-mail.";
+    statusEl.className = "status error";
+    return;
+  }
+
+  statusEl.textContent = "Salvando cadastro...";
+  statusEl.className = "status";
+
+  const { error } = await supabase.from("clientes").insert(payload);
+
+  if (error) {
+    console.error("Erro ao salvar cliente:", error);
+    statusEl.textContent = "Erro ao salvar cliente: " + error.message;
+    statusEl.className = "status error";
+    return;
+  }
+
+  statusEl.textContent = "Cliente cadastrado com sucesso!";
+  statusEl.className = "status ok";
+}
+
+// Listener do formulário de cadastro do visitante (cliente.html)
+if (clienteCadastroForm) {
+  clienteCadastroForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const payload = buildClientePayload("cli-");
+    await inserirCliente(payload, clienteCadastroStatus);
+    if (!clienteCadastroStatus.className.includes("error")) {
+      clienteCadastroForm.reset();
     }
-
-    return data || null;
-  } catch (err) {
-    console.error("[CLIENTE] Erro inesperado ao buscar cliente:", err);
-    return null;
-  }
-}
-
-// Carrega orçamentos do cliente (tabela `orcamentos`)
-async function carregarOrcamentos(clienteId) {
-  if (!clientOrcamentosList) return;
-
-  clientOrcamentosList.innerHTML =
-    '<p class="hint">Carregando informações do seu evento...</p>';
-
-  try {
-    const { data, error } = await supabase
-      .from("orcamentos") // 🔧 ajuste se o nome for outro
-      .select("*")
-      .eq("cliente_id", clienteId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("[CLIENTE] Erro ao carregar orçamentos:", error);
-      clientOrcamentosList.innerHTML =
-        '<p class="hint status-error">Não foi possível carregar os orçamentos.</p>';
-      return { orcamentos: [], ids: [] };
-    }
-
-    const orcamentos = data || [];
-
-    if (!orcamentos.length) {
-      clientOrcamentosList.innerHTML =
-        '<p class="hint">Ainda não há orçamento aprovado para este cliente.</p>';
-      return { orcamentos, ids: [] };
-    }
-
-    const ids = orcamentos.map((o) => o.id);
-    renderizarOrcamentos(orcamentos);
-    return { orcamentos, ids };
-  } catch (err) {
-    console.error("[CLIENTE] Erro inesperado ao carregar orçamentos:", err);
-    clientOrcamentosList.innerHTML =
-      '<p class="hint status-error">Erro inesperado ao carregar orçamentos.</p>';
-    return { orcamentos: [], ids: [] };
-  }
-}
-
-function renderizarOrcamentos(orcamentos) {
-  if (!clientOrcamentosList) return;
-
-  clientOrcamentosList.innerHTML = "";
-
-  orcamentos.forEach((orc) => {
-    const wrapper = document.createElement("div");
-    wrapper.className = "orcamento-item";
-
-    const titulo =
-      orc.titulo ||
-      orc.nome_orcamento ||
-      "Orçamento de decoração de festa / evento";
-
-    const valorTotal = formatCurrency(orc.valor_total || orc.valor || 0);
-    const status = orc.status || "Em análise";
-
-    // URLs dos PDFs – ajuste os nomes das colunas conforme seu banco
-    const urlOrcamento =
-      orc.orcamento_pdf_url || orc.url_pdf_orcamento || orc.link_orcamento;
-    const urlContrato =
-      orc.contrato_pdf_url || orc.url_pdf_contrato || orc.link_contrato;
-
-    wrapper.innerHTML = `
-      <h4>${titulo}</h4>
-      <p class="hint">
-        Valor total do pacote: <strong>${valorTotal}</strong><br />
-        Status: <strong>${status}</strong>
-      </p>
-      <div class="orcamento-links">
-        ${
-          urlOrcamento
-            ? `<a href="${urlOrcamento}" target="_blank" class="btn-link">Ver orçamento (PDF)</a>`
-            : `<span class="hint">Orçamento ainda não anexado em PDF.</span>`
-        }
-        ${
-          urlContrato
-            ? `<a href="${urlContrato}" target="_blank" class="btn-link">Ver contrato (PDF)</a>`
-            : `<span class="hint">Contrato ainda não anexado em PDF.</span>`
-        }
-      </div>
-    `;
-
-    clientOrcamentosList.appendChild(wrapper);
   });
 }
 
-// Carrega parcelas/pagamentos (tabela `parcelas`)
-async function carregarPagamentos(orcamentoIds) {
-  if (!clientPagamentosList) return;
+// ===== Catálogo =====
+async function loadCatalog(categoria = "todos") {
+  if (!catalogoGrid) return; // página sem catálogo
 
-  if (!orcamentoIds || !orcamentoIds.length) {
-    clientPagamentosList.innerHTML =
-      '<p class="hint">Ainda não há forma de pagamento cadastrada para o seu orçamento.</p>';
+  let query = supabase
+    .from("decoracoes")
+    .select("id, categoria, titulo, descricao, capa_url, imagem_url, ativo")
+    .eq("ativo", true)
+    .order("criado_em", { ascending: false });
+
+  if (categoria && categoria !== "todos") {
+    query = query.eq("categoria", categoria);
+  }
+
+  const { data, error } = await query;
+  catalogoGrid.innerHTML = "";
+
+  if (error) {
+    console.error(error);
+    const div = document.createElement("div");
+    div.className = "decor-card";
+    div.innerHTML =
+      '<div class="decor-title">Erro ao carregar catálogo</div>' +
+      `<div class="decor-desc">${error.message || ""}</div>`;
+    catalogoGrid.appendChild(div);
     return;
   }
 
-  clientPagamentosList.innerHTML =
-    '<p class="hint">Carregando informações de pagamento...</p>';
+  if (!data || data.length === 0) {
+    const div = document.createElement("div");
+    div.className = "decor-card";
+    div.innerHTML =
+      '<div class="decor-title">Nenhuma decoração cadastrada</div>' +
+      '<div class="decor-desc">As produções serão adicionadas em breve.</div>';
+    catalogoGrid.appendChild(div);
+    return;
+  }
 
-  try {
-    const { data, error } = await supabase
-      .from("parcelas") // 🔧 ajuste se o nome for outro
-      .select("*")
-      .in("orcamento_id", orcamentoIds)
-      .order("vencimento", { ascending: true });
+  for (const deco of data) {
+    const capa = deco.capa_url || deco.imagem_url;
 
-    if (error) {
-      console.error("[CLIENTE] Erro ao carregar pagamentos:", error);
-      clientPagamentosList.innerHTML =
-        '<p class="hint status-error">Não foi possível carregar as parcelas.</p>';
-      return;
-    }
+    const card = document.createElement("article");
+    card.className = "decor-card";
+    card.innerHTML = `
+      ${capa ? `<img class="decor-img" src="${capa}" alt="${deco.titulo}" />` : ""}
+      <div class="decor-tag">${deco.categoria || "Evento"}</div>
+      <div class="decor-title">${deco.titulo}</div>
+      <div class="decor-desc">${deco.descricao || ""}</div>
+      <button class="btn-secondary btn-small btn-ver-fotos">Ver fotos e detalhes</button>
+    `;
+    catalogoGrid.appendChild(card);
 
-    const parcelas = data || [];
-    renderizarPagamentos(parcelas);
-  } catch (err) {
-    console.error("[CLIENTE] Erro inesperado ao carregar pagamentos:", err);
-    clientPagamentosList.innerHTML =
-      '<p class="hint status-error">Erro inesperado ao carregar parcelas.</p>';
+    const btnVer = card.querySelector(".btn-ver-fotos");
+    btnVer.addEventListener("click", () => openDecorModal(deco));
   }
 }
 
-function renderizarPagamentos(parcelas) {
-  if (!clientPagamentosList) return;
+// Tabs de categoria (só se existirem)
+if (catalogTabs && catalogTabs.length) {
+  catalogTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      catalogTabs.forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      const cat = tab.dataset.categoria || "todos";
+      loadCatalog(cat);
+    });
+  });
+}
 
-  if (!parcelas.length) {
-    clientPagamentosList.innerHTML =
-      '<p class="hint">Ainda não há parcelas cadastradas para este cliente.</p>';
-    return;
+// ===== Imagens da decoração (carrossel) por TÍTULO =====
+async function fetchDecorationImagesByTitulo(titulo, fallbackUrl) {
+  const urls = [];
+
+  try {
+    const { data, error } = await supabase
+      .from("decoracao_imagens")
+      .select("url, ordem")
+      .eq("titulo", titulo)
+      .order("ordem", { ascending: true });
+
+    if (error) {
+      console.error("Erro ao buscar imagens por título:", error);
+    } else if (data && data.length > 0) {
+      data.forEach((row) => urls.push(row.url));
+    }
+  } catch (e) {
+    console.error("Erro geral ao buscar imagens:", e);
   }
 
-  const table = document.createElement("table");
-  table.className = "tabela-pagamentos";
+  if (urls.length === 0 && fallbackUrl) {
+    urls.push(fallbackUrl);
+  }
 
-  const thead = document.createElement("thead");
-  thead.innerHTML = `
-    <tr>
-      <th>Parcela</th>
-      <th>Vencimento</th>
-      <th>Valor</th>
-      <th>Forma</th>
-      <th>Status</th>
-    </tr>
+  return urls;
+}
+
+async function openDecorModal(deco) {
+  if (!decorModal || !decorModalContent) return;
+
+  const capa = deco.capa_url || deco.imagem_url;
+
+  decorModalContent.innerHTML = `
+    <p class="section-kicker">${deco.categoria || "Evento"}</p>
+    <h3 class="modal-title">${deco.titulo}</h3>
+    <p class="modal-desc">${deco.descricao || ""}</p>
+    <div class="carousel">
+      <button class="carousel-arrow" data-dir="prev">&#10094;</button>
+      <div class="carousel-viewport">
+        <img id="carousel-image" class="carousel-image" alt="${deco.titulo}" />
+      </div>
+      <button class="carousel-arrow" data-dir="next">&#10095;</button>
+    </div>
   `;
 
-  const tbody = document.createElement("tbody");
+  decorModal.classList.remove("hidden");
 
-  parcelas.forEach((p) => {
-    const tr = document.createElement("tr");
+  const imgEl = document.getElementById("carousel-image");
+  const arrows = decorModalContent.querySelectorAll(".carousel-arrow");
 
-    const numero =
-      p.numero_parcela || p.parcela || p.n_parcela || p.id || "-";
-    const venc = formatDate(p.vencimento || p.data_vencimento);
-    const valor = formatCurrency(p.valor || p.valor_parcela);
-    const forma = p.forma_pagamento || p.meio_pagamento || "-";
-    const status = p.status_pagamento || p.status || "A vencer";
+  const imagens = await fetchDecorationImagesByTitulo(deco.titulo, capa);
+  let index = 0;
 
-    tr.innerHTML = `
-      <td>${numero}</td>
-      <td>${venc}</td>
-      <td>${valor}</td>
-      <td>${forma}</td>
-      <td>${status}</td>
-    `;
-
-    tbody.appendChild(tr);
-  });
-
-  table.appendChild(thead);
-  table.appendChild(tbody);
-
-  clientPagamentosList.innerHTML = "";
-  clientPagamentosList.appendChild(table);
-}
-
-// Carrega tudo do painel do cliente (cliente + orçamentos + pagamentos)
-async function carregarPainelCliente(user) {
-  const cliente = await buscarClientePorUserId(user.id);
-
-  aplicarEstadoLogado(user, cliente);
-
-  if (!cliente) {
-    if (clientOrcamentosList) {
-      clientOrcamentosList.innerHTML =
-        '<p class="hint status-info">Seus dados ainda não foram vinculados ao painel. A equipe Lorentz fará isso em breve.</p>';
+  function render() {
+    if (!imagens || imagens.length === 0) {
+      imgEl.src = "";
+      imgEl.alt = "Sem imagens cadastradas";
+    } else {
+      imgEl.src = imagens[index];
     }
-    if (clientPagamentosList) {
-      clientPagamentosList.innerHTML =
-        '<p class="hint status-info">Assim que o orçamento e pagamentos forem cadastrados, aparecerão aqui.</p>';
-    }
-    return;
   }
 
-  const { ids: orcamentoIds } = await carregarOrcamentos(cliente.id);
-  await carregarPagamentos(orcamentoIds);
+  arrows.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (!imagens || imagens.length === 0) return;
+      const dir = btn.dataset.dir;
+      if (dir === "next") index = (index + 1) % imagens.length;
+      else index = (index - 1 + imagens.length) % imagens.length;
+      render();
+    });
+  });
+
+  render();
 }
 
-// ============================================================================
-// Autenticação – login / logout
-// ============================================================================
+function closeDecorModal() {
+  if (decorModal) decorModal.classList.add("hidden");
+}
 
-async function checarSessaoInicial() {
-  try {
-    const { data, error } = await supabase.auth.getUser();
+if (decorModal && decorModalClose) {
+  decorModalClose.addEventListener("click", closeDecorModal);
+  decorModal.addEventListener("click", (e) => {
+    if (e.target === decorModal) closeDecorModal();
+  });
+}
 
-    if (error || !data?.user) {
-      aplicarEstadoDeslogado();
+// ===== Login / logout (área do cliente) =====
+if (loginForm) {
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!loginStatus) return;
+
+    loginStatus.textContent = "";
+    loginStatus.className = "status";
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    if (!email || !password) {
+      loginStatus.textContent = "Preencha e-mail e senha.";
+      loginStatus.className = "status error";
       return;
     }
 
-    const user = data.user;
-    await carregarPainelCliente(user);
-  } catch (err) {
-    console.error("[CLIENTE] Erro ao checar sessão inicial:", err);
-    aplicarEstadoDeslogado();
-  }
-}
-
-async function fazerLogin(email, password) {
-  try {
-    setStatus(loginStatus, "Entrando...", "info");
+    loginStatus.textContent = "Autenticando...";
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -360,193 +334,270 @@ async function fazerLogin(email, password) {
     });
 
     if (error) {
-      console.error("[CLIENTE] Erro no login:", error);
-      setStatus(loginStatus, "E-mail ou senha inválidos.", "error");
+      console.error(error);
+      loginStatus.textContent = "Erro ao entrar: " + error.message;
+      loginStatus.className = "status error";
       return;
     }
 
-    const user = data?.user;
+    const user = data.user;
     if (!user) {
-      setStatus(
-        loginStatus,
-        "Não foi possível recuperar os dados do usuário.",
-        "error"
-      );
+      loginStatus.textContent = "Não foi possível recuperar o usuário.";
+      loginStatus.className = "status error";
       return;
     }
 
-    setStatus(loginStatus, "Login realizado com sucesso!", "success");
-    await carregarPainelCliente(user);
-  } catch (err) {
-    console.error("[CLIENTE] Erro inesperado no login:", err);
-    setStatus(
-      loginStatus,
-      "Erro inesperado ao tentar entrar. Tente novamente.",
-      "error"
-    );
-  }
+    loginStatus.textContent = "Login realizado com sucesso!";
+    loginStatus.className = "status ok";
+    await handleSession(user);
+  });
 }
 
-async function fazerLogout() {
-  try {
+if (btnLogout) {
+  btnLogout.addEventListener("click", async () => {
     await supabase.auth.signOut();
-  } catch (err) {
-    console.error("[CLIENTE] Erro ao sair:", err);
-  } finally {
-    aplicarEstadoDeslogado();
-  }
+    setLoggedOutUI();
+  });
 }
 
-// ============================================================================
-// Cadastro de cliente (visitante) – NÃO cria usuário de login, só registro
-// ============================================================================
+// ===== Resumo das parcelas na área do cliente (com base no texto do orçamento) =====
+function renderPagamentosResumo(orc) {
+  if (!clientPagamentosList) return;
 
-async function cadastrarClienteVisitante(payload) {
-  try {
-    setStatus(
-      clienteCadastroStatus,
-      "Enviando seus dados para a equipe Lorentz...",
-      "info"
-    );
+  if (!orc || !orc.forma_pagamento) {
+    clientPagamentosList.innerHTML = `
+      <p class="hint">
+        Ainda não há forma de pagamento cadastrada para o seu orçamento.
+      </p>`;
+    return;
+  }
 
-    const { error } = await supabase.from("clientes").insert(payload);
+  const partes = orc.forma_pagamento
+    .split("|")
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
 
-    if (error) {
-      console.error("[CLIENTE] Erro ao cadastrar cliente visitante:", error);
-      setStatus(
-        clienteCadastroStatus,
-        "Não foi possível enviar seus dados. Tente novamente.",
-        "error"
-      );
-      return;
+  clientPagamentosList.innerHTML = "";
+
+  const card = document.createElement("article");
+  card.className = "decor-card";
+
+  card.innerHTML = `
+    <div class="decor-tag">Resumo das parcelas</div>
+    <div class="decor-title">${partes.length} parcela(s) combinadas</div>
+  ";
+
+  const ul = document.createElement("ul");
+  ul.style.marginTop = "8px";
+  ul.style.fontSize = "0.85rem";
+  ul.style.color = "var(--muted)";
+  ul.style.paddingLeft = "18px";
+
+  partes.forEach((txt) => {
+    const li = document.createElement("li");
+    li.textContent = txt;
+    ul.appendChild(li);
+  });
+
+  card.appendChild(ul);
+  clientPagamentosList.appendChild(card);
+}
+
+// ===== Parcelas detalhadas (tabela parcelas) para o cliente =====
+async function loadClientParcelas(clienteId) {
+  if (!clientPagamentosList) return;
+
+  const { data, error } = await supabase
+    .from("parcelas")
+    .select("numero, tipo, data_venc, status")
+    .eq("cliente_id", clienteId)
+    .order("data_venc", { ascending: true });
+
+  if (error) {
+    console.error("Erro ao carregar parcelas do cliente:", error);
+    const msg = document.createElement("p");
+    msg.className = "status error";
+    msg.textContent = "Erro ao carregar as parcelas.";
+    clientPagamentosList.appendChild(msg);
+    return;
+  }
+
+  if (!data || !data.length) {
+    const msg = document.createElement("p");
+    msg.className = "hint";
+    msg.textContent =
+      "Ainda não há parcelas registradas individualmente. A equipe Lorentz pode atualizar isso pelo app ADM.";
+    clientPagamentosList.appendChild(msg);
+    return;
+  }
+
+  const list = document.createElement("div");
+  list.style.marginTop = "10px";
+  list.style.display = "flex";
+  list.style.flexDirection = "column";
+  list.style.gap = "6px";
+
+  data.forEach((parc) => {
+    const row = document.createElement("div");
+    row.style.display = "flex";
+    row.style.justifyContent = "space-between";
+    row.style.fontSize = "0.8rem";
+
+    let dataBr = parc.data_venc;
+    try {
+      if (parc.data_venc) {
+        dataBr = new Date(parc.data_venc).toLocaleDateString("pt-BR");
+      }
+    } catch (_) {
+      /* mantém valor original em caso de erro */
     }
 
-    setStatus(
-      clienteCadastroStatus,
-      "Cadastro enviado com sucesso! A equipe Lorentz entrará em contato.",
-      "success"
-    );
-  } catch (err) {
-    console.error("[CLIENTE] Erro inesperado no cadastro de visitante:", err);
-    setStatus(
-      clienteCadastroStatus,
-      "Erro inesperado ao enviar seus dados.",
-      "error"
-    );
+    const statusLabel = parc.status || "aberta";
+
+    row.innerHTML = `
+      <span>${parc.numero}ª parcela - ${parc.tipo || "Meio de pagamento"} - vencimento ${dataBr}</span>
+      <span>${statusLabel}</span>
+    `;
+    list.appendChild(row);
+  });
+
+  clientPagamentosList.appendChild(list);
+}
+
+// ===== Área do cliente: carregar orçamentos / contratos para o usuário logado =====
+async function loadClientOrcamentosForUser(user) {
+  if (!clientOrcamentosList) return;
+
+  clientOrcamentosList.innerHTML =
+    "<p class='hint'>Carregando informações do seu evento...</p>";
+  if (clientPagamentosList) {
+    clientPagamentosList.innerHTML =
+      "<p class='hint'>Carregando informações de pagamento...</p>";
+  }
+
+  const email = user.email;
+  if (!email) {
+    clientOrcamentosList.innerHTML =
+      "<p class='status error'>Não foi possível identificar seu e-mail de acesso.</p>";
+    if (clientPagamentosList) {
+      clientPagamentosList.innerHTML = "";
+    }
+    return;
+  }
+
+  const { data: orcs, error: orcErr } = await supabase
+    .from("orcamentos")
+    .select(
+      "id, valor_total, forma_pagamento, contrato_pdf_url, orcamento_pdf_url, status, cliente_id"
+    )
+    .eq("email", email)
+    .order("id", { ascending: false });
+
+  if (orcErr) {
+    console.error("Erro ao carregar orçamentos na área do cliente:", orcErr);
+    clientOrcamentosList.innerHTML =
+      "<p class='status error'>Erro ao carregar seu orçamento. Tente novamente.</p>";
+    if (clientPagamentosList) {
+      clientPagamentosList.innerHTML = "";
+    }
+    return;
+  }
+
+  if (!orcs || !orcs.length) {
+    clientOrcamentosList.innerHTML =
+      "<p class='hint'>Ainda não encontramos nenhum orçamento vinculado a este e-mail. Assim que a equipe Lorentz anexar o orçamento e o contrato, eles aparecerão aqui.</p>";
+    if (clientPagamentosList) {
+      clientPagamentosList.innerHTML =
+        "<p class='hint'>Nenhuma forma de pagamento cadastrada ainda.</p>";
+    }
+    return;
+  }
+
+  // tenta buscar dados do cliente com base no primeiro orçamento
+  let cliente = null;
+  const primeiro = orcs[0];
+
+  if (primeiro.cliente_id) {
+    const { data: clientes, error: cliErr } = await supabase
+      .from("clientes")
+      .select("id, nome, data_evento, endereco_evento")
+      .eq("id", primeiro.cliente_id)
+      .limit(1);
+
+    if (cliErr) {
+      console.error("Erro ao carregar cliente na área do cliente:", cliErr);
+    } else if (clientes && clientes.length) {
+      cliente = clientes[0];
+    }
+  }
+
+  const nomeCliente = cliente?.nome || email;
+  const dataEventoTexto = cliente?.data_evento
+    ? new Date(cliente.data_evento).toLocaleDateString("pt-BR")
+    : "data a definir";
+
+  clientOrcamentosList.innerHTML = "";
+
+  orcs.forEach((orc) => {
+    const wrapper = document.createElement("article");
+    wrapper.className = "decor-card";
+
+    wrapper.innerHTML = `
+      <div class="decor-tag">Orçamento #${orc.id}</div>
+      <div class="decor-title">${nomeCliente}</div>
+      <p class="hint">
+        Evento em: ${dataEventoTexto}
+        ${
+          cliente?.endereco_evento
+            ? " • Local: " + cliente.endereco_evento
+            : ""
+        }
+      </p>
+      <p class="hint">
+        Status: <strong>${orc.status || "aprovado"}</strong>
+        ${
+          orc.forma_pagamento
+            ? " • Forma de pagamento: " + orc.forma_pagamento
+            : ""
+        }
+      </p>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;">
+        ${
+          orc.orcamento_pdf_url
+            ? `<a class="btn-secondary btn-small" href="${orc.orcamento_pdf_url}" target="_blank">Ver orçamento em PDF</a>`
+            : ""
+        }
+        ${
+          orc.contrato_pdf_url
+            ? `<a class="btn-primary btn-small" href="${orc.contrato_pdf_url}" target="_blank">Ver contrato em PDF</a>`
+            : ""
+        }
+      </div>
+    `;
+
+    clientOrcamentosList.appendChild(wrapper);
+  });
+
+  // Usa o orçamento mais recente para montar o resumo de parcelas
+  if (clientPagamentosList) {
+    renderPagamentosResumo(primeiro);
+    const clientIdForParcels = cliente?.id || primeiro.cliente_id;
+    if (clientIdForParcels) {
+      await loadClientParcelas(clientIdForParcels);
+    }
   }
 }
 
-// ============================================================================
-// Eventos de formulário / botões
-// ============================================================================
-
-function registrarEventos() {
-  // Login
-  if (loginForm) {
-    loginForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-
-      const emailInput = document.getElementById("email");
-      const passwordInput = document.getElementById("password");
-
-      const email = emailInput?.value?.trim();
-      const password = passwordInput?.value || "";
-
-      if (!email || !password) {
-        setStatus(loginStatus, "Informe e-mail e senha para entrar.", "error");
-        return;
-      }
-
-      await fazerLogin(email, password);
-    });
+// ===== Inicialização =====
+(async () => {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const user = data?.session?.user ?? null;
+    await handleSession(user);
+  } catch (e) {
+    console.error("Erro ao recuperar sessão:", e);
+    setLoggedOutUI();
   }
 
-  // Logout
-  if (btnLogout) {
-    btnLogout.addEventListener("click", async () => {
-      await fazerLogout();
-    });
-  }
-
-  // Cadastro de visitante
-  if (clienteCadastroForm) {
-    clienteCadastroForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-
-      const nomeContratante = document
-        .getElementById("cli-nome-contratante")
-        ?.value.trim();
-      const nomeNoivos = document
-        .getElementById("cli-nome-noivos")
-        ?.value.trim();
-      const email = document.getElementById("cli-email")?.value.trim();
-      const telefone = document.getElementById("cli-telefone")?.value.trim();
-      const telefoneWhats = document
-        .getElementById("cli-telefone-whatsapp")
-        ?.value.trim();
-      const cpf = document.getElementById("cli-cpf")?.value.trim();
-      const dataEvento = document.getElementById("cli-data-evento")?.value;
-      const horaEvento = document.getElementById("cli-hora-evento")?.value;
-      const enderecoResid = document
-        .getElementById("cli-endereco-residencial")
-        ?.value.trim();
-      const enderecoEvento = document
-        .getElementById("cli-endereco-evento")
-        ?.value.trim();
-
-      if (!nomeContratante || !email || !telefone) {
-        setStatus(
-          clienteCadastroStatus,
-          "Preencha pelo menos nome, e-mail e telefone.",
-          "error"
-        );
-        return;
-      }
-
-      // Se existir usuário logado, vincula esse cadastro ao user_id
-      let userId = null;
-      try {
-        const { data } = await supabase.auth.getUser();
-        userId = data?.user?.id || null;
-      } catch {
-        userId = null;
-      }
-
-      const payload = {
-        nome_contratante: nomeContratante,
-        nome_noivos: nomeNoivos || null,
-        email: email,
-        telefone: telefone,
-        telefone_whatsapp: telefoneWhats || null,
-        cpf: cpf || null,
-        data_evento: dataEvento || null,
-        hora_evento: horaEvento || null,
-        endereco_residencial: enderecoResid || null,
-        endereco_evento: enderecoEvento || null,
-        origem_cadastro: "site_cliente", // opcional, útil pro ADM
-      };
-
-      if (userId) {
-        payload.user_id = userId; // 🔧 exige coluna user_id em `clientes`
-      }
-
-      await cadastrarClienteVisitante(payload);
-
-      // Não limpar tudo pra pessoa ainda ver o que preencheu,
-      // mas se quiser, descomente:
-      // clienteCadastroForm.reset();
-    });
-  }
-}
-
-// ============================================================================
-// Inicialização
-// ============================================================================
-
-async function init() {
-  aplicarEstadoDeslogado(); // estado padrão
-  registrarEventos();
-  await checarSessaoInicial();
-}
-
-init();
+  await loadCatalog("todos");
+})();
