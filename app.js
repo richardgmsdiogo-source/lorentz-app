@@ -35,7 +35,7 @@ const decorModalClose = document.getElementById("decor-modal-close");
 
 // Cache do catálogo
 let decoracoesCache = [];
-const decorImagensCache = {};
+const decorImagensCache = {}; // { [decorId]: string[] }
 
 // ===========================================================================
 // HELPERS DE UI
@@ -561,24 +561,25 @@ function registrarEventosCliente() {
 }
 
 // ===========================================================================
-// CATÁLOGO – helpers específicos
+// CATÁLOGO – imagens via tabela + Storage
 // ===========================================================================
 
-// bucket: decoracoes
+// ---------- Helpers de bucket (decoracoes) ----------
+
 function getDecorPublicUrl(path) {
   if (!path) return null;
   const { data } = supabase.storage.from("decoracoes").getPublicUrl(path);
   return data?.publicUrl || null;
 }
 
-// pega o nome da pasta onde estão as fotos da decoração
+// nome da pasta onde estão as fotos da decoração
 function obterPastaDecoracao(decor) {
   const raw =
     decor.pasta_imagens ||
     decor.pasta ||
     decor.folder ||
     decor.slug ||
-    decor.id; // seus IDs 6,7,8,10... batem com as pastas
+    decor.id;
 
   if (raw === undefined || raw === null) return null;
   return String(raw);
@@ -599,7 +600,7 @@ async function listarImagensNoPrefixo(prefix) {
     return { arquivos: [], subpastas: [] };
   }
 
-  // Supabase: pastas vêm sem metadata, arquivos têm metadata
+  // Supabase: pastas não têm metadata; arquivos têm metadata
   const arquivos = data.filter((item) =>
     /\.(jpg|jpeg|png|webp)$/i.test(item.name)
   );
@@ -608,62 +609,107 @@ async function listarImagensNoPrefixo(prefix) {
   return { arquivos, subpastas };
 }
 
-async function carregarImagensDecoracoes(lista) {
-  const promises = lista.map(async (decor) => {
-    const pastaBase = obterPastaDecoracao(decor);
-    if (!pastaBase) return;
+// ---------- Busca imagens na tabela decoracao_imagens (se existir) ----------
 
-    const urls = [];
+async function buscarImagensDecoracaoDB(decoracaoId) {
+  const urls = [];
 
-    try {
-      // 1) Arquivos direto na pasta "10"
-      const { arquivos, subpastas } = await listarImagensNoPrefixo(pastaBase);
+  try {
+    const { data, error } = await supabase
+      .from("decoracao_imagens")
+      .select("url, ordem")
+      .eq("decoracao_id", decoracaoId)
+      .order("ordem", { ascending: true });
 
-      arquivos.forEach((f) => {
-        const url = getDecorPublicUrl(`${pastaBase}/${f.name}`);
+    if (error) {
+      console.warn("[CATALOGO] Erro em decoracao_imagens:", error.message);
+      return urls;
+    }
+
+    (data || []).forEach((row) => {
+      if (row.url) urls.push(row.url);
+    });
+  } catch (err) {
+    console.warn(
+      "[CATALOGO] decoracao_imagens não disponível ou erro inesperado:",
+      err
+    );
+  }
+
+  return urls;
+}
+
+// ---------- Busca imagens no Storage, usando pasta baseada na decoração ----------
+
+async function buscarImagensDecoracaoStorage(decor) {
+  const urls = [];
+  const pastaBase = obterPastaDecoracao(decor);
+  if (!pastaBase) return urls;
+
+  try {
+    // 1) Arquivos direto na pasta "10"
+    const { arquivos, subpastas } = await listarImagensNoPrefixo(pastaBase);
+
+    arquivos.forEach((f) => {
+      const url = getDecorPublicUrl(`${pastaBase}/${f.name}`);
+      if (url) urls.push(url);
+    });
+
+    // 2) Subpastas "10/10", "10/11", "10/12"...
+    for (const folder of subpastas) {
+      const subPrefix = `${pastaBase}/${folder.name}`;
+      const { arquivos: arquivosSub } = await listarImagensNoPrefixo(
+        subPrefix
+      );
+      arquivosSub.forEach((f) => {
+        const url = getDecorPublicUrl(`${subPrefix}/${f.name}`);
         if (url) urls.push(url);
       });
-
-      // 2) Subpastas "10/10", "10/11", "10/12"...
-      for (const folder of subpastas) {
-        const subPrefix = `${pastaBase}/${folder.name}`;
-        const { arquivos: arquivosSub } = await listarImagensNoPrefixo(
-          subPrefix
-        );
-        arquivosSub.forEach((f) => {
-          const url = getDecorPublicUrl(`${subPrefix}/${f.name}`);
-          if (url) urls.push(url);
-        });
-      }
-
-      // 3) Fallback opcional: se ainda não achou nada, tenta pegar
-      // algumas imagens soltas na raiz do bucket, só pra não ficar sem foto.
-      if (!urls.length) {
-        const { arquivos: raiz } = await listarImagensNoPrefixo("");
-        raiz.forEach((f) => {
-          const url = getDecorPublicUrl(f.name);
-          if (url) urls.push(url);
-        });
-      }
-
-      decorImagensCache[decor.id] = { urls };
-      console.log(
-        `[CATALOGO] Imagens carregadas para decoração ${decor.id}:`,
-        urls
-      );
-    } catch (err) {
-      console.error(
-        "[CATALOGO] Erro inesperado ao carregar imagens da decoração",
-        decor.id,
-        err
-      );
     }
+  } catch (err) {
+    console.error(
+      "[CATALOGO] Erro inesperado ao carregar imagens da decoração via Storage",
+      decor.id,
+      err
+    );
+  }
+
+  return urls;
+}
+
+// ---------- Monta cache de imagens para cada decoração ----------
+
+async function carregarImagensDecoracoes(lista) {
+  const promises = lista.map(async (decor) => {
+    let urls = [];
+
+    // 1) Tenta pela tabela decoracao_imagens (se existir)
+    urls = await buscarImagensDecoracaoDB(decor.id);
+
+    // 2) Se ainda não tem nada, tenta buscar no Storage
+    if (!urls.length) {
+      urls = await buscarImagensDecoracaoStorage(decor);
+    }
+
+    // 3) Fallback final: capa_url / imagem_url
+    const capa = decor.capa_url || decor.imagem_url;
+    if (!urls.length && capa) {
+      urls.push(capa);
+    }
+
+    decorImagensCache[decor.id] = urls;
+    console.log(
+      `[CATALOGO] Imagens para decoração ${decor.id}:`,
+      urls.length
+    );
   });
 
   await Promise.all(promises);
 }
 
-async function carregarCatalogo() {
+// ---------- Carrega catálogo do Supabase ----------
+
+async function carregarCatalogo(categoria = "todos") {
   if (!catalogoGrid) return;
 
   catalogoGrid.innerHTML = '<p class="hint">Carregando cenários...</p>';
@@ -687,13 +733,15 @@ async function carregarCatalogo() {
     }
 
     await carregarImagensDecoracoes(decoracoesCache);
-    aplicarFiltroCatalogo("todos");
+    aplicarFiltroCatalogo(categoria);
   } catch (err) {
     console.error("[CATALOGO] Erro inesperado ao carregar catálogo:", err);
     catalogoGrid.innerHTML =
       '<p class="hint status-error">Erro inesperado ao carregar o catálogo.</p>';
   }
 }
+
+// ---------- Renderização do grid ----------
 
 function aplicarFiltroCatalogo(categoria) {
   if (!catalogoGrid) return;
@@ -723,11 +771,13 @@ function aplicarFiltroCatalogo(categoria) {
   catalogoGrid.innerHTML = "";
 
   lista.forEach((decor) => {
-    const imagens = decorImagensCache[decor.id]?.urls || [];
-    const capa = imagens[0] || null;
+    const imagens = decorImagensCache[decor.id] || [];
+    const capa =
+      imagens[0] || decor.capa_url || decor.imagem_url || null;
 
     const titulo = decor.titulo || decor.nome || "Decoração Lorentz";
-    const categoria = decor.categoria || decor.tipo || "Decoração temática";
+    const categoriaLabel =
+      decor.categoria || decor.tipo || "Decoração temática";
     const descricao = decor.descricao_curta || decor.descricao || "";
 
     const card = document.createElement("article");
@@ -746,7 +796,7 @@ function aplicarFiltroCatalogo(categoria) {
       </div>
       <div class="decor-card-body">
         <h3>${titulo}</h3>
-        <p class="decor-card-meta">${categoria}</p>
+        <p class="decor-card-meta">${categoriaLabel}</p>
         ${descricao ? `<p class="decor-card-desc">${descricao}</p>` : ""}
         <button class="btn-secondary btn-small" type="button">
           Ver fotos
@@ -768,11 +818,13 @@ function aplicarFiltroCatalogo(categoria) {
   });
 }
 
+// ---------- Modal + carrossel ----------
+
 function abrirModalDecor(decorId) {
   if (!decorModal || !decorModalContent) return;
 
   const decor = decoracoesCache.find((d) => d.id === decorId);
-  const imagens = decorImagensCache[decorId]?.urls || [];
+  const imagens = decorImagensCache[decorId] || [];
 
   const titulo = decor?.titulo || decor?.nome || "Decoração Lorentz";
   const descricao = decor?.descricao || decor?.descricao_curta || "";
@@ -850,7 +902,7 @@ function registrarEventosCatalogo() {
         catalogTabs.forEach((t) => t.classList.remove("active"));
         tab.classList.add("active");
         const cat = tab.dataset.categoria || "todos";
-        aplicarFiltroCatalogo(cat);
+        carregarCatalogo(cat);
       });
     });
   }
@@ -888,7 +940,7 @@ async function init() {
   // Catálogo (só roda se estiver na página de catálogo)
   if (catalogoGrid) {
     registrarEventosCatalogo();
-    await carregarCatalogo();
+    await carregarCatalogo("todos");
   }
 }
 
