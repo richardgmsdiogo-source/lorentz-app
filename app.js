@@ -144,6 +144,16 @@ async function buscarCliente(user) {
 // Orçamentos – buscados por cliente_id
 // ---------------------------------------------------------------------------
 
+// Constrói URL pública a partir do path salvo no banco
+function buildPublicUrl(path) {
+  if (!path) return null;
+  const { data } = supabase.storage
+    .from("documentos") // nome do bucket
+    .getPublicUrl(path);
+
+  return data?.publicUrl || null;
+}
+
 async function carregarOrcamentos(clienteId) {
   if (!clientOrcamentosList) return { orcamentos: [], ids: [] };
 
@@ -154,8 +164,7 @@ async function carregarOrcamentos(clienteId) {
     const { data, error } = await supabase
       .from("orcamentos")
       .select("*")
-      .eq("cliente_id", clienteId)
-      .order("created_at", { ascending: false });
+      .eq("cliente_id", clienteId); // tirei o .order("created_at")
 
     if (error) {
       console.error("[CLIENTE] Erro ao carregar orçamentos:", error);
@@ -199,20 +208,12 @@ function renderizarOrcamentos(orcamentos) {
     const valorTotal = formatCurrency(orc.valor_total || orc.valor || 0);
     const status = orc.status || "Em análise";
 
-    // Tentativa de descobrir colunas possíveis com o link do PDF
-    const urlOrcamento =
-      orc.orcamento_pdf_url ||
-      orc.url_pdf_orcamento ||
-      orc.orcamento_url ||
-      orc.orcamento_path ||
-      null;
+    // paths salvos na tabela orcamentos
+    const orcamentoPath = orc.orcamento_path;
+    const contratoPath = orc.contrato_path;
 
-    const urlContrato =
-      orc.contrato_pdf_url ||
-      orc.url_pdf_contrato ||
-      orc.contrato_url ||
-      orc.contrato_path ||
-      null;
+    const urlOrcamento = buildPublicUrl(orcamentoPath);
+    const urlContrato = buildPublicUrl(contratoPath);
 
     wrapper.innerHTML = `
       <h4>${titulo}</h4>
