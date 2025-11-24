@@ -1,16 +1,18 @@
 // app.js
-// Portal Lorentz – Área do Cliente + Cadastro de Interessados
+// Portal Lorentz – Catálogo + Área do Cliente + Cadastro de Interessados
 
 import { supabase } from "./config.js";
 
-// ---------------------------------------------------------------------------
-// Seleção de elementos
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// SELEÇÃO DE ELEMENTOS (podem ser null em algumas páginas)
+// ===========================================================================
 
+// Header
 const headerSessionText = document.getElementById("header-session-text");
 const headerRole = document.getElementById("header-role");
 const btnLogout = document.getElementById("btn-logout");
 
+// Página CLIENTE
 const loginSection = document.getElementById("login-section");
 const clientSection = document.getElementById("client-section");
 const loginForm = document.getElementById("login-form");
@@ -24,9 +26,20 @@ const clienteCadastroStatus = document.getElementById(
 const clientOrcamentosList = document.getElementById("client-orcamentos");
 const clientPagamentosList = document.getElementById("client-pagamentos");
 
-// ---------------------------------------------------------------------------
-// Helpers de UI
-// ---------------------------------------------------------------------------
+// Página CATÁLOGO
+const catalogoGrid = document.getElementById("catalogo-grid");
+const catalogTabs = document.querySelectorAll(".catalog-tab");
+const decorModal = document.getElementById("decor-modal");
+const decorModalContent = document.getElementById("decor-modal-content");
+const decorModalClose = document.getElementById("decor-modal-close");
+
+// Cache do catálogo
+let decoracoesCache = [];
+const decorImagensCache = {};
+
+// ===========================================================================
+// HELPERS DE UI
+// ===========================================================================
 
 function setStatus(el, message, type = "info") {
   if (!el) return;
@@ -62,9 +75,9 @@ function formatDate(dateStr) {
   return d.toLocaleDateString("pt-BR");
 }
 
-// ---------------------------------------------------------------------------
-// Estado de sessão
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// ESTADO DE SESSÃO – CLIENTE
+// ===========================================================================
 
 function aplicarEstadoDeslogado() {
   if (headerSessionText) headerSessionText.textContent = "Visitante";
@@ -74,8 +87,8 @@ function aplicarEstadoDeslogado() {
   }
   if (btnLogout) btnLogout.classList.add("hidden");
 
-  showElement(loginSection);
-  hideElement(clientSection);
+  if (loginSection) showElement(loginSection);
+  if (clientSection) hideElement(clientSection);
 
   setStatus(loginStatus, "");
 }
@@ -96,13 +109,13 @@ function aplicarEstadoLogado(user, cliente) {
 
   if (btnLogout) btnLogout.classList.remove("hidden");
 
-  hideElement(loginSection);
-  showElement(clientSection);
+  if (loginSection) hideElement(loginSection);
+  if (clientSection) showElement(clientSection);
 }
 
-// ---------------------------------------------------------------------------
-// Buscar cliente (tenta por user_id e depois por email)
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// CLIENTE – BUSCA NO BANCO (tenta por user_id e depois por email)
+// ===========================================================================
 
 async function buscarCliente(user) {
   // 1) Tenta por user_id
@@ -143,11 +156,11 @@ async function buscarCliente(user) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// DOCUMENTOS DO CLIENTE (ORÇAMENTO / CONTRATO) – direto no Storage
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// CLIENTE – DOCUMENTOS (ORÇAMENTO / CONTRATO) via STORAGE
+// ===========================================================================
 
-// Constrói URL pública a partir do path no bucket "documentos"
+// bucket: documentos
 function getPublicUrlFromPath(path) {
   if (!path) return null;
   const { data } = supabase.storage.from("documentos").getPublicUrl(path);
@@ -235,9 +248,9 @@ function renderizarDocumentosCliente(folder, orcamentoFile, contratoFile) {
   `;
 }
 
-// ---------------------------------------------------------------------------
-// Pagamentos – por cliente_id (tabela parcelas)
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// CLIENTE – PAGAMENTOS (tabela parcelas)
+// ===========================================================================
 
 async function carregarPagamentos(clienteId) {
   if (!clientPagamentosList) return;
@@ -320,9 +333,9 @@ function renderizarPagamentos(parcelas) {
   clientPagamentosList.appendChild(table);
 }
 
-// ---------------------------------------------------------------------------
-// Carregar painel completo do cliente
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// CLIENTE – CARREGAR PAINEL COMPLETO
+// ===========================================================================
 
 async function carregarPainelCliente(user) {
   const cliente = await buscarCliente(user);
@@ -342,12 +355,12 @@ async function carregarPainelCliente(user) {
   }
 
   await carregarDocumentosCliente(cliente.id); // PDFs direto do Storage
-  await carregarPagamentos(cliente.id);        // Parcelas da tabela parcelas
+  await carregarPagamentos(cliente.id); // Parcelas da tabela parcelas
 }
 
-// ---------------------------------------------------------------------------
-// Autenticação – login / logout
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// AUTENTICAÇÃO – login / logout
+// ===========================================================================
 
 async function checarSessaoInicial() {
   try {
@@ -412,9 +425,9 @@ async function fazerLogout() {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Cadastro de visitante
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// CADASTRO DE VISITANTE
+// ===========================================================================
 
 async function cadastrarClienteVisitante(payload) {
   try {
@@ -451,11 +464,11 @@ async function cadastrarClienteVisitante(payload) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Eventos
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// EVENTOS – formulário de login / cadastro / sair
+// ===========================================================================
 
-function registrarEventos() {
+function registrarEventosCliente() {
   if (loginForm) {
     loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -547,14 +560,307 @@ function registrarEventos() {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Inicialização
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// CATÁLOGO – helpers específicos
+// ===========================================================================
+
+// bucket: decoracoes
+function getDecorPublicUrl(path) {
+  if (!path) return null;
+  const { data } = supabase.storage.from("decoracoes").getPublicUrl(path);
+  return data?.publicUrl || null;
+}
+
+// tenta descobrir qual campo representa a pasta das imagens
+function obterPastaDecoracao(decor) {
+  return (
+    decor.pasta_imagens ||
+    decor.pasta ||
+    decor.folder ||
+    decor.slug ||
+    decor.id
+  );
+}
+
+async function carregarImagensDecoracoes(lista) {
+  const promises = lista.map(async (decor) => {
+    const folder = obterPastaDecoracao(decor);
+    if (!folder) return;
+
+    try {
+      const { data, error } = await supabase.storage
+        .from("decoracoes")
+        .list(folder, {
+          limit: 50,
+          sortBy: { column: "name", order: "asc" },
+        });
+
+      if (error) {
+        console.warn(
+          "[CATALOGO] Erro ao listar imagens da decoração",
+          decor.id,
+          error
+        );
+        return;
+      }
+
+      const files = (data || []).filter((f) =>
+        /\.(jpg|jpeg|png|webp)$/i.test(f.name)
+      );
+      const urls = files.map((f) =>
+        getDecorPublicUrl(`${folder}/${f.name}`)
+      );
+
+      decorImagensCache[decor.id] = { folder, files, urls };
+    } catch (err) {
+      console.error(
+        "[CATALOGO] Erro inesperado ao carregar imagens da decoração",
+        decor.id,
+        err
+      );
+    }
+  });
+
+  await Promise.all(promises);
+}
+
+async function carregarCatalogo() {
+  if (!catalogoGrid) return;
+
+  catalogoGrid.innerHTML = '<p class="hint">Carregando cenários...</p>';
+
+  try {
+    const { data, error } = await supabase
+      .from("decoracoes")
+      .select("*");
+
+    if (error) {
+      console.error("[CATALOGO] Erro ao carregar decoracoes:", error);
+      catalogoGrid.innerHTML =
+        '<p class="hint status-error">Não foi possível carregar o catálogo.</p>';
+      return;
+    }
+
+    decoracoesCache = data || [];
+
+    if (!decoracoesCache.length) {
+      catalogoGrid.innerHTML =
+        '<p class="hint">Ainda não há cenários cadastrados.</p>';
+      return;
+    }
+
+    await carregarImagensDecoracoes(decoracoesCache);
+    aplicarFiltroCatalogo("todos");
+  } catch (err) {
+    console.error("[CATALOGO] Erro inesperado ao carregar catálogo:", err);
+    catalogoGrid.innerHTML =
+      '<p class="hint status-error">Erro inesperado ao carregar o catálogo.</p>';
+  }
+}
+
+function aplicarFiltroCatalogo(categoria) {
+  if (!catalogoGrid) return;
+
+  if (!decoracoesCache.length) {
+    catalogoGrid.innerHTML =
+      '<p class="hint">Ainda não há cenários cadastrados.</p>';
+    return;
+  }
+
+  let lista = decoracoesCache;
+
+  if (categoria && categoria !== "todos") {
+    const alvo = categoria.toLowerCase();
+    lista = decoracoesCache.filter((d) => {
+      const cat = (d.categoria || d.tipo || "").toLowerCase();
+      return cat === alvo;
+    });
+  }
+
+  if (!lista.length) {
+    catalogoGrid.innerHTML =
+      '<p class="hint">Nenhum cenário encontrado para esta categoria.</p>';
+    return;
+  }
+
+  catalogoGrid.innerHTML = "";
+
+  lista.forEach((decor) => {
+    const imagens = decorImagensCache[decor.id]?.urls || [];
+    const capa = imagens[0] || null;
+
+    const titulo =
+      decor.titulo || decor.nome || "Decoração Lorentz";
+    const categoria =
+      decor.categoria || decor.tipo || "Decoração temática";
+    const descricao = decor.descricao_curta || decor.descricao || "";
+
+    const card = document.createElement("article");
+    card.className = "decor-card";
+
+    card.innerHTML = `
+      <div class="decor-card-img-wrapper">
+        ${
+          capa
+            ? `<img src="${capa}" alt="${titulo.replace(
+                /"/g,
+                "&quot;"
+              )}" class="decor-card-img" />`
+            : `<div class="decor-card-img decor-card-img-placeholder">Sem foto</div>`
+        }
+      </div>
+      <div class="decor-card-body">
+        <h3>${titulo}</h3>
+        <p class="decor-card-meta">${categoria}</p>
+        ${
+          descricao
+            ? `<p class="decor-card-desc">${descricao}</p>`
+            : ""
+        }
+        <button class="btn-secondary btn-small" type="button">
+          Ver fotos
+        </button>
+      </div>
+    `;
+
+    const btn = card.querySelector("button");
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      abrirModalDecor(decor.id);
+    });
+
+    card.addEventListener("click", () => {
+      abrirModalDecor(decor.id);
+    });
+
+    catalogoGrid.appendChild(card);
+  });
+}
+
+function abrirModalDecor(decorId) {
+  if (!decorModal || !decorModalContent) return;
+
+  const decor = decoracoesCache.find((d) => d.id === decorId);
+  const imagens = decorImagensCache[decorId]?.urls || [];
+
+  const titulo =
+    decor?.titulo || decor?.nome || "Decoração Lorentz";
+  const descricao = decor?.descricao || decor?.descricao_curta || "";
+
+  decorModalContent.innerHTML = "";
+
+  if (!imagens.length) {
+    decorModalContent.innerHTML = `
+      <h3>${titulo}</h3>
+      <p class="hint">${
+        descricao ||
+        "Ainda não há fotos cadastradas para este cenário."
+      }</p>
+    `;
+    decorModal.classList.remove("hidden");
+    return;
+  }
+
+  let idx = 0;
+
+  decorModalContent.innerHTML = `
+    <h3>${titulo}</h3>
+    ${
+      descricao
+        ? `<p class="hint" style="margin-bottom: 10px;">${descricao}</p>`
+        : ""
+    }
+    <div class="decor-carousel">
+      <button class="carousel-btn carousel-prev" type="button">&#10094;</button>
+      <div class="carousel-frame">
+        <img class="carousel-img" src="${imagens[0]}" alt="${titulo}" />
+      </div>
+      <button class="carousel-btn carousel-next" type="button">&#10095;</button>
+    </div>
+    <p class="hint" style="text-align:center; margin-top:8px;">
+      <span id="carousel-indicator">1 / ${imagens.length}</span>
+    </p>
+  `;
+
+  const imgEl = decorModalContent.querySelector(".carousel-img");
+  const btnPrev = decorModalContent.querySelector(".carousel-prev");
+  const btnNext = decorModalContent.querySelector(".carousel-next");
+  const indicator = decorModalContent.querySelector("#carousel-indicator");
+
+  function update() {
+    imgEl.src = imagens[idx];
+    if (indicator) {
+      indicator.textContent = `${idx + 1} / ${imagens.length}`;
+    }
+  }
+
+  btnPrev.addEventListener("click", (e) => {
+    e.stopPropagation();
+    idx = (idx - 1 + imagens.length) % imagens.length;
+    update();
+  });
+
+  btnNext.addEventListener("click", (e) => {
+    e.stopPropagation();
+    idx = (idx + 1) % imagens.length;
+    update();
+  });
+
+  decorModal.classList.remove("hidden");
+}
+
+function fecharModalDecor() {
+  if (!decorModal) return;
+  decorModal.classList.add("hidden");
+}
+
+function registrarEventosCatalogo() {
+  if (catalogTabs && catalogTabs.length) {
+    catalogTabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        catalogTabs.forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        const cat = tab.dataset.categoria || "todos";
+        aplicarFiltroCatalogo(cat);
+      });
+    });
+  }
+
+  if (decorModalClose) {
+    decorModalClose.addEventListener("click", () => {
+      fecharModalDecor();
+    });
+  }
+
+  if (decorModal) {
+    const backdrop = decorModal.querySelector(".modal-backdrop");
+    if (backdrop) {
+      backdrop.addEventListener("click", () => fecharModalDecor());
+    }
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      fecharModalDecor();
+    }
+  });
+}
+
+// ===========================================================================
+// INICIALIZAÇÃO
+// ===========================================================================
 
 async function init() {
+  // Área do cliente (se a página tiver os elementos)
   aplicarEstadoDeslogado();
-  registrarEventos();
+  registrarEventosCliente();
   await checarSessaoInicial();
+
+  // Catálogo (só roda se estiver na página de catálogo)
+  if (catalogoGrid) {
+    registrarEventosCatalogo();
+    await carregarCatalogo();
+  }
 }
 
 init();
