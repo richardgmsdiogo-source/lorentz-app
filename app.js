@@ -17,7 +17,9 @@ const loginForm = document.getElementById("login-form");
 const loginStatus = document.getElementById("login-status");
 
 const clienteCadastroForm = document.getElementById("cliente-cadastro-form");
-const clienteCadastroStatus = document.getElementById("cliente-cadastro-status");
+const clienteCadastroStatus = document.getElementById(
+  "cliente-cadastro-status"
+);
 
 const clientOrcamentosList = document.getElementById("client-orcamentos");
 const clientPagamentosList = document.getElementById("client-pagamentos");
@@ -99,11 +101,11 @@ function aplicarEstadoLogado(user, cliente) {
 }
 
 // ---------------------------------------------------------------------------
-// Buscar cliente (corrigido: tenta por user_id e por email)
+// Buscar cliente (tenta por user_id e depois por email)
 // ---------------------------------------------------------------------------
 
 async function buscarCliente(user) {
-  // 1) Tenta por user_id, se a coluna existir e estiver preenchida
+  // 1) Tenta por user_id
   try {
     const { data, error } = await supabase
       .from("clientes")
@@ -114,13 +116,14 @@ async function buscarCliente(user) {
     if (!error && data) {
       return data;
     }
-
-    // Se a coluna não existir ou não achou nada, cai pro fallback
   } catch (err) {
-    console.warn("[CLIENTE] Erro buscando por user_id, tentando por email:", err);
+    console.warn(
+      "[CLIENTE] Erro buscando cliente por user_id, tentando por email:",
+      err
+    );
   }
 
-  // 2) Fallback: tenta encontrar pelo email (se existir coluna email)
+  // 2) Fallback: tenta por email
   try {
     const { data, error } = await supabase
       .from("clientes")
@@ -141,106 +144,99 @@ async function buscarCliente(user) {
 }
 
 // ---------------------------------------------------------------------------
-// Orçamentos – buscados por cliente_id
+// DOCUMENTOS DO CLIENTE (ORÇAMENTO / CONTRATO) – direto no Storage
 // ---------------------------------------------------------------------------
 
-// Constrói URL pública a partir do path salvo no banco
-function buildPublicUrl(path) {
+// Constrói URL pública a partir do path no bucket "documentos"
+function getPublicUrlFromPath(path) {
   if (!path) return null;
-  const { data } = supabase.storage
-    .from("documentos") // nome do bucket
-    .getPublicUrl(path);
-
+  const { data } = supabase.storage.from("documentos").getPublicUrl(path);
   return data?.publicUrl || null;
 }
 
-async function carregarOrcamentos(clienteId) {
-  if (!clientOrcamentosList) return { orcamentos: [], ids: [] };
+async function carregarDocumentosCliente(clienteId) {
+  if (!clientOrcamentosList) return;
 
   clientOrcamentosList.innerHTML =
-    '<p class="hint">Carregando informações do seu evento...</p>';
+    '<p class="hint">Carregando documentos do seu evento...</p>';
 
   try {
-    const { data, error } = await supabase
-      .from("orcamentos")
-      .select("*")
-      .eq("cliente_id", clienteId); // tirei o .order("created_at")
+    const folder = String(clienteId); // pasta = id do cliente
+
+    const { data, error } = await supabase.storage
+      .from("documentos")
+      .list(folder, {
+        limit: 20,
+        sortBy: { column: "name", order: "asc" },
+      });
 
     if (error) {
-      console.error("[CLIENTE] Erro ao carregar orçamentos:", error);
+      console.error("[CLIENTE] Erro ao listar documentos no Storage:", error);
       clientOrcamentosList.innerHTML =
-        '<p class="hint status-error">Não foi possível carregar os orçamentos.</p>';
-      return { orcamentos: [], ids: [] };
+        '<p class="hint status-error">Não foi possível carregar os documentos.</p>';
+      return;
     }
 
-    const orcamentos = data || [];
-
-    if (!orcamentos.length) {
+    if (!data || !data.length) {
       clientOrcamentosList.innerHTML =
-        '<p class="hint">Ainda não há orçamento cadastrado para este cliente.</p>';
-      return { orcamentos, ids: [] };
+        '<p class="hint">Ainda não há documentos anexados para este cliente.</p>';
+      return;
     }
 
-    renderizarOrcamentos(orcamentos);
-    const ids = orcamentos.map((o) => o.id);
-    return { orcamentos, ids };
+    let orcamentoFile = null;
+    let contratoFile = null;
+
+    data.forEach((file) => {
+      const name = file.name.toLowerCase();
+      if (!orcamentoFile && name.includes("orcamento")) {
+        orcamentoFile = file;
+      }
+      if (!contratoFile && name.includes("contrato")) {
+        contratoFile = file;
+      }
+    });
+
+    renderizarDocumentosCliente(folder, orcamentoFile, contratoFile);
   } catch (err) {
-    console.error("[CLIENTE] Erro inesperado ao carregar orçamentos:", err);
+    console.error("[CLIENTE] Erro inesperado ao carregar documentos:", err);
     clientOrcamentosList.innerHTML =
-      '<p class="hint status-error">Erro inesperado ao carregar orçamentos.</p>';
-    return { orcamentos: [], ids: [] };
+      '<p class="hint status-error">Erro inesperado ao carregar documentos.</p>';
   }
 }
 
-function renderizarOrcamentos(orcamentos) {
+function renderizarDocumentosCliente(folder, orcamentoFile, contratoFile) {
   if (!clientOrcamentosList) return;
-  clientOrcamentosList.innerHTML = "";
 
-  orcamentos.forEach((orc) => {
-    const wrapper = document.createElement("div");
-    wrapper.className = "orcamento-item";
+  const urlOrcamento = orcamentoFile
+    ? getPublicUrlFromPath(`${folder}/${orcamentoFile.name}`)
+    : null;
 
-    const titulo =
-      orc.titulo ||
-      orc.nome_orcamento ||
-      "Orçamento de decoração de festa / evento";
+  const urlContrato = contratoFile
+    ? getPublicUrlFromPath(`${folder}/${contratoFile.name}`)
+    : null;
 
-    const valorTotal = formatCurrency(orc.valor_total || orc.valor || 0);
-    const status = orc.status || "Em análise";
-
-    // paths salvos na tabela orcamentos
-    const orcamentoPath = orc.orcamento_path;
-    const contratoPath = orc.contrato_path;
-
-    const urlOrcamento = buildPublicUrl(orcamentoPath);
-    const urlContrato = buildPublicUrl(contratoPath);
-
-    wrapper.innerHTML = `
-      <h4>${titulo}</h4>
+  clientOrcamentosList.innerHTML = `
+    <div class="orcamento-item">
+      <h4>Orçamento de decoração de festa / evento</h4>
       <p class="hint">
-        Valor total do pacote: <strong>${valorTotal}</strong><br />
-        Status: <strong>${status}</strong>
-      </p>
-      <div class="orcamento-links">
         ${
           urlOrcamento
             ? `<a href="${urlOrcamento}" target="_blank" class="btn-link">Ver orçamento (PDF)</a>`
-            : `<span class="hint">Orçamento ainda não anexado em PDF.</span>`
+            : `Orçamento ainda não anexado em PDF.`
         }
+        <br />
         ${
           urlContrato
             ? `<a href="${urlContrato}" target="_blank" class="btn-link">Ver contrato (PDF)</a>`
-            : `<span class="hint">Contrato ainda não anexado em PDF.</span>`
+            : `Contrato ainda não anexado em PDF.`
         }
-      </div>
-    `;
-
-    clientOrcamentosList.appendChild(wrapper);
-  });
+      </p>
+    </div>
+  `;
 }
 
 // ---------------------------------------------------------------------------
-// Pagamentos – AGORA por cliente_id (usando sua tabela parcelas)
+// Pagamentos – por cliente_id (tabela parcelas)
 // ---------------------------------------------------------------------------
 
 async function carregarPagamentos(clienteId) {
@@ -345,8 +341,8 @@ async function carregarPainelCliente(user) {
     return;
   }
 
-  await carregarOrcamentos(cliente.id);
-  await carregarPagamentos(cliente.id);
+  await carregarDocumentosCliente(cliente.id); // PDFs direto do Storage
+  await carregarPagamentos(cliente.id);        // Parcelas da tabela parcelas
 }
 
 // ---------------------------------------------------------------------------
