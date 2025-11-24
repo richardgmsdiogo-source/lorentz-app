@@ -26,51 +26,55 @@ function getDecorPublicUrl(path) {
 
 // Lista arquivos de um prefixo no bucket decoracoes
 async function listarNoBucket(prefix) {
+  // prefix pode ser "" (raiz), "10", "10/10" etc.
+  const path = prefix || "";
   const { data, error } = await supabase.storage
     .from("decoracoes")
-    .list(prefix, {
+    .list(path, {
       limit: 50,
       sortBy: { column: "name", order: "asc" },
     });
 
   if (error || !data) {
-    console.warn("[CATÁLOGO] Erro ao listar", prefix, error);
-    return { files: [], folders: [] };
+    console.warn("[CATÁLOGO] Erro ao listar", path, error);
+    return [];
   }
 
-  // Supabase: arquivos têm metadata (size/mimetype), pastas vêm com metadata = null
-  const files = data.filter(
-    (item) => item.metadata && /\.(jpg|jpeg|png|webp)$/i.test(item.name)
+  // Somente arquivos de imagem
+  const files = data.filter((item) =>
+    /\.(jpg|jpeg|png|webp)$/i.test(item.name)
   );
-  const folders = data.filter((item) => !item.metadata);
-
-  return { files, folders };
+  return files.map((f) => ({ prefix: path, name: f.name }));
 }
 
-// Carrega todas as imagens de uma decoração (pasta = id, mais subpastas se tiver)
+// Carrega todas as imagens de uma decoração
 async function carregarImagensDecoracao(decor) {
   const id = decor.id;
-  const raiz = String(id);
-  const urls = [];
+  const pastaId = String(id);
 
-  // 1. Arquivos direto na pasta /id
-  const { files, folders } = await listarNoBucket(raiz);
-  files.forEach((f) => {
-    const path = `${raiz}/${f.name}`;
-    const url = getDecorPublicUrl(path);
-    if (url) urls.push(url);
-  });
+  // Tentativas de lugares onde as fotos podem estar
+  const candidatos = [
+    pastaId,               // "10"
+    `${pastaId}/${pastaId}` // "10/10" (caso tenha subpasta)
+  ];
 
-  // 2. Se não achou nada direto, procura em subpastas (ex.: 10/10, 10/11, etc.)
-  for (const folder of folders) {
-    const subPrefix = `${raiz}/${folder.name}`;
-    const { files: subFiles } = await listarNoBucket(subPrefix);
-    subFiles.forEach((f) => {
-      const path = `${subPrefix}/${f.name}`;
-      const url = getDecorPublicUrl(path);
-      if (url) urls.push(url);
-    });
+  let arquivos = [];
+
+  for (const prefix of candidatos) {
+    arquivos = await listarNoBucket(prefix);
+    if (arquivos.length) break;
   }
+
+  // Se ainda não achou nada, como fallback pega algumas imagens soltas na raiz
+  if (!arquivos.length) {
+    arquivos = await listarNoBucket("");
+  }
+
+  const urls = arquivos.map((arq) =>
+    getDecorPublicUrl(
+      arq.prefix ? `${arq.prefix}/${arq.name}` : arq.name
+    )
+  );
 
   imagensCache[id] = urls;
 }
@@ -295,7 +299,6 @@ async function carregarCatalogo() {
       return;
     }
 
-    // Carrega imagens para cada decoração (incluindo subpastas)
     await Promise.all(decoracoesCache.map((d) => carregarImagensDecoracao(d)));
 
     aplicarFiltroCatalogo("todos");
