@@ -571,47 +571,86 @@ function getDecorPublicUrl(path) {
   return data?.publicUrl || null;
 }
 
-// tenta descobrir qual campo representa a pasta das imagens
+// pega o nome da pasta onde estão as fotos da decoração
 function obterPastaDecoracao(decor) {
-  return (
+  const raw =
     decor.pasta_imagens ||
     decor.pasta ||
     decor.folder ||
     decor.slug ||
-    decor.id
+    decor.id; // seus IDs 6,7,8,10... batem com as pastas
+
+  if (raw === undefined || raw === null) return null;
+  return String(raw);
+}
+
+// Lista arquivos de imagem em um prefixo (pasta) do bucket decoracoes
+async function listarImagensNoPrefixo(prefix) {
+  const safePrefix = prefix || "";
+  const { data, error } = await supabase.storage
+    .from("decoracoes")
+    .list(safePrefix, {
+      limit: 50,
+      sortBy: { column: "name", order: "asc" },
+    });
+
+  if (error || !data) {
+    console.warn("[CATALOGO] Erro ao listar prefixo", safePrefix, error);
+    return { arquivos: [], subpastas: [] };
+  }
+
+  // Supabase: pastas vêm sem metadata, arquivos têm metadata
+  const arquivos = data.filter((item) =>
+    /\.(jpg|jpeg|png|webp)$/i.test(item.name)
   );
+  const subpastas = data.filter((item) => !item.metadata);
+
+  return { arquivos, subpastas };
 }
 
 async function carregarImagensDecoracoes(lista) {
   const promises = lista.map(async (decor) => {
-    const folder = obterPastaDecoracao(decor);
-    if (!folder) return;
+    const pastaBase = obterPastaDecoracao(decor);
+    if (!pastaBase) return;
+
+    const urls = [];
 
     try {
-      const { data, error } = await supabase.storage
-        .from("decoracoes")
-        .list(folder, {
-          limit: 50,
-          sortBy: { column: "name", order: "asc" },
-        });
+      // 1) Arquivos direto na pasta "10"
+      const { arquivos, subpastas } = await listarImagensNoPrefixo(pastaBase);
 
-      if (error) {
-        console.warn(
-          "[CATALOGO] Erro ao listar imagens da decoração",
-          decor.id,
-          error
+      arquivos.forEach((f) => {
+        const url = getDecorPublicUrl(`${pastaBase}/${f.name}`);
+        if (url) urls.push(url);
+      });
+
+      // 2) Subpastas "10/10", "10/11", "10/12"...
+      for (const folder of subpastas) {
+        const subPrefix = `${pastaBase}/${folder.name}`;
+        const { arquivos: arquivosSub } = await listarImagensNoPrefixo(
+          subPrefix
         );
-        return;
+        arquivosSub.forEach((f) => {
+          const url = getDecorPublicUrl(`${subPrefix}/${f.name}`);
+          if (url) urls.push(url);
+        });
       }
 
-      const files = (data || []).filter((f) =>
-        /\.(jpg|jpeg|png|webp)$/i.test(f.name)
-      );
-      const urls = files.map((f) =>
-        getDecorPublicUrl(`${folder}/${f.name}`)
-      );
+      // 3) Fallback opcional: se ainda não achou nada, tenta pegar
+      // algumas imagens soltas na raiz do bucket, só pra não ficar sem foto.
+      if (!urls.length) {
+        const { arquivos: raiz } = await listarImagensNoPrefixo("");
+        raiz.forEach((f) => {
+          const url = getDecorPublicUrl(f.name);
+          if (url) urls.push(url);
+        });
+      }
 
-      decorImagensCache[decor.id] = { folder, files, urls };
+      decorImagensCache[decor.id] = { urls };
+      console.log(
+        `[CATALOGO] Imagens carregadas para decoração ${decor.id}:`,
+        urls
+      );
     } catch (err) {
       console.error(
         "[CATALOGO] Erro inesperado ao carregar imagens da decoração",
@@ -630,9 +669,7 @@ async function carregarCatalogo() {
   catalogoGrid.innerHTML = '<p class="hint">Carregando cenários...</p>';
 
   try {
-    const { data, error } = await supabase
-      .from("decoracoes")
-      .select("*");
+    const { data, error } = await supabase.from("decoracoes").select("*");
 
     if (error) {
       console.error("[CATALOGO] Erro ao carregar decoracoes:", error);
@@ -689,10 +726,8 @@ function aplicarFiltroCatalogo(categoria) {
     const imagens = decorImagensCache[decor.id]?.urls || [];
     const capa = imagens[0] || null;
 
-    const titulo =
-      decor.titulo || decor.nome || "Decoração Lorentz";
-    const categoria =
-      decor.categoria || decor.tipo || "Decoração temática";
+    const titulo = decor.titulo || decor.nome || "Decoração Lorentz";
+    const categoria = decor.categoria || decor.tipo || "Decoração temática";
     const descricao = decor.descricao_curta || decor.descricao || "";
 
     const card = document.createElement("article");
@@ -712,11 +747,7 @@ function aplicarFiltroCatalogo(categoria) {
       <div class="decor-card-body">
         <h3>${titulo}</h3>
         <p class="decor-card-meta">${categoria}</p>
-        ${
-          descricao
-            ? `<p class="decor-card-desc">${descricao}</p>`
-            : ""
-        }
+        ${descricao ? `<p class="decor-card-desc">${descricao}</p>` : ""}
         <button class="btn-secondary btn-small" type="button">
           Ver fotos
         </button>
@@ -743,8 +774,7 @@ function abrirModalDecor(decorId) {
   const decor = decoracoesCache.find((d) => d.id === decorId);
   const imagens = decorImagensCache[decorId]?.urls || [];
 
-  const titulo =
-    decor?.titulo || decor?.nome || "Decoração Lorentz";
+  const titulo = decor?.titulo || decor?.nome || "Decoração Lorentz";
   const descricao = decor?.descricao || decor?.descricao_curta || "";
 
   decorModalContent.innerHTML = "";
@@ -753,8 +783,7 @@ function abrirModalDecor(decorId) {
     decorModalContent.innerHTML = `
       <h3>${titulo}</h3>
       <p class="hint">${
-        descricao ||
-        "Ainda não há fotos cadastradas para este cenário."
+        descricao || "Ainda não há fotos cadastradas para este cenário."
       }</p>
     `;
     decorModal.classList.remove("hidden");
