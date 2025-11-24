@@ -503,6 +503,25 @@ h2 {
 .footer a:hover {
   text-decoration: underline;
 }
+.tabela-pagamentos {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabela-pagamentos th,
+.tabela-pagamentos td {
+  text-align: center;        /* centraliza tudo */
+  font-size: 0.85rem;        /* letra menor */
+  padding: 8px 4px;
+}
+
+.tabela-pagamentos th {
+  font-weight: 600;
+}
+
+.tabela-pagamentos tbody tr:nth-child(even) {
+  background: #f6f5f7;       /* ou use var(--card2) se tiver */
+}
 
 /* Classes utilitárias */
 .hidden {
